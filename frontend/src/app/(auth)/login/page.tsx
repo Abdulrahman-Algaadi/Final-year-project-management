@@ -54,6 +54,7 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const supabase = createClient();
+      if (!supabase) throw new Error("Supabase is not configured on this deployment.");
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
       if (!data.session?.access_token) throw new Error("No session returned");

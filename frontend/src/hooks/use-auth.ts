@@ -10,6 +10,11 @@ export function useAuth() {
   const supabase = createClient();
 
   const loadProfile = useCallback(async () => {
+    if (!supabase) {
+      setUser(null);
+      setLoading(false);
+      return;
+    }
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
@@ -32,18 +37,22 @@ export function useAuth() {
     } finally {
       setLoading(false);
     }
-  }, [supabase.auth]);
+  }, [supabase]);
 
   useEffect(() => {
+    if (!supabase) {
+      setLoading(false);
+      return;
+    }
     loadProfile();
     const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
       loadProfile();
     });
     return () => subscription.unsubscribe();
-  }, [loadProfile, supabase.auth]);
+  }, [loadProfile, supabase]);
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    if (supabase) await supabase.auth.signOut();
     setUser(null);
   };
 

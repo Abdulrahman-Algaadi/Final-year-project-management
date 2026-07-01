@@ -4,12 +4,12 @@ import {
   createContext,
   useContext,
   useEffect,
-  useMemo,
   useRef,
   useState,
   useCallback,
 } from "react";
 import { useSearchParams } from "next/navigation";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import { fetchProfile } from "@/lib/api/services/auth.service";
 import { invalidateReferenceCache } from "@/lib/api/services/reference.service";
@@ -44,14 +44,28 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   );
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(!isDemo);
-  const supabase = useMemo(() => createClient(), []);
+  const supabaseRef = useRef<SupabaseClient | null>(null);
   const initialLoad = useRef(true);
+
+  const getSupabase = useCallback((): SupabaseClient | null => {
+    if (!supabaseRef.current) {
+      supabaseRef.current = createClient();
+    }
+    return supabaseRef.current;
+  }, []);
 
   const demoUser = DEMO_USERS[demoRole];
 
   const loadSession = useCallback(async () => {
     if (isDemo) {
       setUser(demoUser);
+      setLoading(false);
+      return;
+    }
+
+    const supabase = getSupabase();
+    if (!supabase) {
+      setUser(null);
       setLoading(false);
       return;
     }
@@ -77,7 +91,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
       initialLoad.current = false;
     }
-  }, [isDemo, demoUser, supabase]);
+  }, [isDemo, demoUser, getSupabase]);
 
   useEffect(() => {
     if (isDemo) {
@@ -91,6 +105,9 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (isDemo) return;
 
+    const supabase = getSupabase();
+    if (!supabase) return;
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "TOKEN_REFRESHED") {
         loadSession();
@@ -98,7 +115,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     });
 
     return () => subscription.unsubscribe();
-  }, [isDemo, loadSession, supabase]);
+  }, [isDemo, loadSession, getSupabase]);
 
   const signOut = async () => {
     if (!isDemo) {
@@ -108,7 +125,8 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       } catch {
         /* proceed with local sign-out */
       }
-      await supabase.auth.signOut();
+      const supabase = getSupabase();
+      if (supabase) await supabase.auth.signOut();
     }
     setUser(null);
     invalidateReferenceCache();
