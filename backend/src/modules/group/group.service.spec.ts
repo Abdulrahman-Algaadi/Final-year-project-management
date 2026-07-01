@@ -4,6 +4,7 @@ import { GroupRepository, GroupStudentRepository, GroupProjectRepository } from 
 import { GroupMapper } from './group.mapper';
 import { GroupPolicy } from './group.policy';
 import { StudentRepository } from '@/modules/student/student.repository';
+import { AdvisorRepository } from '@/modules/advisor/advisor.repository';
 
 describe('GroupService', () => {
   let service: GroupService;
@@ -18,6 +19,7 @@ describe('GroupService', () => {
         { provide: GroupStudentRepository, useValue: {} },
         { provide: GroupProjectRepository, useValue: {} },
         { provide: StudentRepository, useValue: {} },
+        { provide: AdvisorRepository, useValue: {} },
       ],
     }).compile();
 

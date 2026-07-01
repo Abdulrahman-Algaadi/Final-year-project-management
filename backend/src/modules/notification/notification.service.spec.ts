@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NotificationService } from './notification.service';
 import { NotificationRepository } from './notification.repository';
 import { NotificationMapper } from './notification.mapper';
+import { GroupStudentRepository } from '@/modules/group/group.repository';
 
 describe('NotificationService', () => {
   let service: NotificationService;
@@ -12,6 +13,7 @@ describe('NotificationService', () => {
         NotificationService,
         NotificationMapper,
         { provide: NotificationRepository, useValue: {} },
+        { provide: GroupStudentRepository, useValue: {} },
       ],
     }).compile();
 
