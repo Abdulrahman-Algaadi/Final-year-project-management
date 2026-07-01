@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { getPublicEnv, hasSupabaseConfig } from "@/lib/env";
 
 const PROTECTED_ROUTES = [
   "/dashboard",
@@ -30,11 +31,22 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  if (!hasSupabaseConfig()) {
+    console.error(
+      "[middleware] Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY. " +
+        "Set them in Vercel → Settings → Environment Variables, then redeploy.",
+    );
+    const loginUrl = request.nextUrl.clone();
+    loginUrl.pathname = "/login";
+    loginUrl.search = "error=missing_env";
+    return NextResponse.redirect(loginUrl);
+  }
+
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    getPublicEnv("NEXT_PUBLIC_SUPABASE_URL"),
+    getPublicEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY"),
     {
       cookies: {
         getAll() {

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { Mail, Lock, ArrowRight } from "lucide-react";
 import { AppLogo } from "@/components/shared/app-logo";
@@ -18,12 +18,19 @@ import { toast } from "sonner";
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { t } = useTranslation();
   const { user, loading: sessionLoading, setUser, refresh } = useSession();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (searchParams.get("error") === "missing_env") {
+      toast.error("Server misconfigured: add Supabase env vars on Vercel and redeploy.");
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (!sessionLoading && user) {
