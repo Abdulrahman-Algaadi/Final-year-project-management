@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LanguageSwitcher } from "@/components/shared/language-switcher";
+import { hasSupabaseConfig, getMissingPublicEnvVars } from "@/lib/env";
 import { setCachedAccessToken } from "@/lib/api/auth-token";
 import { createClient } from "@/lib/supabase/client";
 import { loginCallback } from "@/lib/api/services/auth.service";
@@ -26,6 +27,8 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [loading, setLoading] = useState(false);
+  const supabaseConfigured = hasSupabaseConfig();
+  const missingEnvVars = getMissingPublicEnvVars();
 
   useEffect(() => {
     if (searchParams.get("error") === "missing_env") {
@@ -98,6 +101,23 @@ export default function LoginPage() {
             <CardDescription>{t("login.cardDesc")}</CardDescription>
           </CardHeader>
           <CardContent>
+            {!supabaseConfigured && (
+              <div
+                role="alert"
+                className="mb-4 rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-3 text-sm text-destructive"
+              >
+                <p className="font-medium">Deployment not configured</p>
+                <p className="mt-1 text-destructive/90">
+                  Add these in Vercel → Settings → Environment Variables (enable{" "}
+                  <strong>Production</strong> and <strong>Preview</strong>), then redeploy:
+                </p>
+                <ul className="mt-2 list-inside list-disc font-mono text-xs">
+                  {missingEnvVars.map((name) => (
+                    <li key={name}>{name}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
             <form onSubmit={handleSubmit} className="space-y-4" noValidate>
               <div className="space-y-2">
                 <label htmlFor="email" className="text-sm font-medium">{t("login.email")} *</label>
@@ -113,7 +133,7 @@ export default function LoginPage() {
                   <Input id="password" type="password" autoComplete="current-password" placeholder="••••••••" className="ps-9" value={password} onChange={(e) => setPassword(e.target.value)} error={errors.password} />
                 </div>
               </div>
-              <Button type="submit" className="w-full gap-2" loading={loading}>
+              <Button type="submit" className="w-full gap-2" loading={loading} disabled={!supabaseConfigured}>
                 {t("common.signIn")}
                 <ArrowRight className="size-4 rtl-flip" />
               </Button>
