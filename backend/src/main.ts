@@ -38,6 +38,10 @@ async function bootstrap() {
 
   const port = process.env.PORT ?? 3000;
   await app.listen(port, '0.0.0.0');
+  console.log(`FYPMS API listening on port ${port}`);
 }
 
-bootstrap();
+bootstrap().catch((error: unknown) => {
+  console.error('Failed to start FYPMS API:', error);
+  process.exit(1);
+});

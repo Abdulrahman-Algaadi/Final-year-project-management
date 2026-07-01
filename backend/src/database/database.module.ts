@@ -31,6 +31,8 @@ import { ENTITIES } from './entities';
           logging: false,
           ssl: sslConfig,
           extra: poolerExtra,
+          retryAttempts: 5,
+          retryDelay: 3000,
         };
 
         if (databaseUrl) {

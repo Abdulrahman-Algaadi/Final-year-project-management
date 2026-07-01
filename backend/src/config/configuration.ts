@@ -2,9 +2,9 @@ import * as Joi from 'joi';
 
 export const validationSchema = Joi.object({
   NODE_ENV: Joi.string().valid('development', 'production', 'test').default('development'),
-  PORT: Joi.number().default(3000),
+  PORT: Joi.number().port().default(3000),
   API_PREFIX: Joi.string().default('api/v1'),
-  DATABASE_URL: Joi.string().uri().optional(),
+  DATABASE_URL: Joi.string().optional(),
   DATABASE_HOST: Joi.string().when('DATABASE_URL', {
     is: Joi.exist(),
     then: Joi.optional(),
@@ -22,8 +22,8 @@ export const validationSchema = Joi.object({
     otherwise: Joi.required(),
   }),
   DATABASE_NAME: Joi.string().default('postgres'),
-  DATABASE_SSL: Joi.boolean().default(true),
-  DATABASE_POOLER: Joi.boolean().default(true),
+  DATABASE_SSL: Joi.string().valid('true', 'false').default('true'),
+  DATABASE_POOLER: Joi.string().valid('true', 'false').default('true'),
   SUPABASE_URL: Joi.string().uri().required(),
   SUPABASE_ANON_KEY: Joi.string().required(),
   SUPABASE_SERVICE_ROLE_KEY: Joi.string().required(),
@@ -32,6 +32,7 @@ export const validationSchema = Joi.object({
   THROTTLE_TTL: Joi.number().default(60),
   THROTTLE_LIMIT: Joi.number().default(100),
   CORS_ORIGINS: Joi.string().default('http://localhost:5173'),
+  CORS_ALLOW_VERCEL: Joi.string().valid('true', 'false').default('true'),
 });
 
 export default () => ({
