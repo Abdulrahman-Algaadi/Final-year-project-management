@@ -12,7 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { LanguageSwitcher } from "@/components/shared/language-switcher";
 import { hasSupabaseConfig, getMissingPublicEnvVars } from "@/lib/env";
 import { setCachedAccessToken } from "@/lib/api/auth-token";
-import { createClient } from "@/lib/supabase/client";
+import { createClient, createClientAsync } from "@/lib/supabase/client";
 import { loginCallback } from "@/lib/api/services/auth.service";
 import { useSession } from "@/providers/session-provider";
 import { useTranslation } from "@/providers/locale-provider";
@@ -57,7 +57,7 @@ export default function LoginPage() {
     if (!validate()) return;
     setLoading(true);
     try {
-      const supabase = createClient();
+      const supabase = await createClientAsync();
       if (!supabase) throw new Error("Supabase is not configured on this deployment.");
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;

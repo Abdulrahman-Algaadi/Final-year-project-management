@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/client";
+import { loadRuntimeConfig } from "@/lib/runtime-config";
 
 let cachedAccessToken: string | null = null;
 
@@ -11,6 +12,8 @@ export async function getAccessToken(): Promise<string | null> {
   if (cachedAccessToken) {
     return cachedAccessToken;
   }
+
+  await loadRuntimeConfig();
 
   const supabase = createClient();
   if (!supabase) return null;
