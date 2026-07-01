@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>FYPMS — Complete System Walkthrough</title>
+  <style>
+    @page { margin: 2cm 2.2cm; size: A4; }
+    * { box-sizing: border-box; }
+    body {
+      font-family: "Segoe UI", Calibri, Arial, sans-serif;
+      font-size: 11pt;
+      line-height: 1.55;
+      color: #1a1a2e;
+      max-width: 100%;
+      margin: 0;
+      padding: 0;
+    }
+    .cover {
+      page-break-after: always;
+      text-align: center;
+      padding-top: 28%;
+    }
+    .cover h1 { font-size: 28pt; color: #1e3a5f; margin-bottom: 0.3em; }
+    .cover .subtitle { font-size: 14pt; color: #4a5568; margin-bottom: 2em; }
+    .cover .meta { font-size: 11pt; color: #718096; }
+    h1 { font-size: 20pt; color: #1e3a5f; border-bottom: 2px solid #3182ce; padding-bottom: 0.2em; margin-top: 1.4em; page-break-after: avoid; }
+    h2 { font-size: 14pt; color: #2c5282; margin-top: 1.2em; page-break-after: avoid; }
+    h3 { font-size: 12pt; color: #2d3748; margin-top: 1em; page-break-after: avoid; }
+    p { margin: 0.5em 0; }
+    table { width: 100%; border-collapse: collapse; margin: 0.8em 0; font-size: 10pt; page-break-inside: avoid; }
+    th, td { border: 1px solid #cbd5e0; padding: 6px 10px; text-align: left; }
+    th { background: #ebf8ff; color: #2c5282; font-weight: 600; }
+    tr:nth-child(even) { background: #f7fafc; }
+    pre, .diagram {
+      background: #f7fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 4px;
+      padding: 12px 14px;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 9pt;
+      line-height: 1.45;
+      white-space: pre-wrap;
+      page-break-inside: avoid;
+      overflow-wrap: break-word;
+    }
+    ul, ol { margin: 0.4em 0; padding-left: 1.5em; }
+    li { margin: 0.25em 0; }
+    .toc { page-break-after: always; }
+    .toc ol { line-height: 1.8; }
+    .page-break { page-break-before: always; }
+    .badge { display: inline-block; background: #ebf8ff; color: #2b6cb0; padding: 2px 8px; border-radius: 4px; font-size: 9pt; }
+    .check { color: #276749; font-weight: bold; }
+    .cross { color: #c53030; }
+    footer {
+      margin-top: 2em;
+      padding-top: 1em;
+      border-top: 1px solid #e2e8f0;
+      font-size: 9pt;
+      color: #718096;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+<div class="cover">
+  <h1>FYPMS</h1>
+  <p class="subtitle">Final Year Project Management System<br>Complete System Walkthrough</p>
+  <p class="meta">Document Version 1.0 &nbsp;|&nbsp; June 2026</p>
+  <p class="meta" style="margin-top:3em;">Full-stack monorepo: Next.js + NestJS + PostgreSQL (Supabase)</p>
+</div>
+
+<div class="toc">
+  <h1>Table of Contents</h1>
+  <ol>
+    <li>Executive Summary</li>
+    <li>System Architecture</li>
+    <li>Technology Stack</li>
+    <li>User Roles &amp; Permissions</li>
+    <li>Authentication Flow</li>
+    <li>Demo Mode vs Live Mode</li>
+    <li>End-to-End Project Lifecycle</li>
+    <li>Role-Based Walkthroughs</li>
+    <li>Module-by-Module Flow</li>
+    <li>API &amp; Security Model</li>
+    <li>Database &amp; Infrastructure</li>
+    <li>Setup &amp; Deployment</li>
+    <li>Viva / Demo Script (15 minutes)</li>
+    <li>Appendix: Login Credentials</li>
+  </ol>
+</div>
+
+<h1>1. Executive Summary</h1>
+<p>FYPMS is a full-stack web application that helps universities manage <strong>Final Year Projects (FYP)</strong>. It connects four stakeholder roles — <strong>Student</strong>, <strong>Advisor</strong>, <strong>Coordinator</strong>, and <strong>Admin</strong> — through a single portal.</p>
+
+<h3>What the system does</h3>
+<ul>
+  <li>Registers students and organizes them into <strong>project groups</strong></li>
+  <li>Assigns <strong>projects</strong> and <strong>advisors</strong> to groups</li>
+  <li>Tracks <strong>submissions</strong> (proposals, reports, presentations) with file upload</li>
+  <li>Schedules <strong>advisor meetings</strong> and records <strong>evaluations/grades</strong></li>
+  <li>Sends <strong>notifications</strong> when events occur</li>
+  <li>Provides <strong>reports</strong> and <strong>audit logs</strong> for administrators</li>
+  <li>Supports <strong>English and Arabic</strong> UI with light/dark themes</li>
+</ul>
+
+<table>
+  <tr><th>Mode</th><th>URL</th></tr>
+  <tr><td>Live login</td><td>http://localhost:3001/login</td></tr>
+  <tr><td>Demo (no backend)</td><td>http://localhost:3001/dashboard?demo=true&amp;role=Student</td></tr>
+  <tr><td>API documentation</td><td>http://localhost:3000/docs</td></tr>
+  <tr><td>Health check</td><td>http://localhost:3000/api/v1/health</td></tr>
+</table>
+
+<h1>2. System Architecture</h1>
+<pre class="diagram">┌─────────────────────────────────────────────────────────────────┐
+│                        USER BROWSER                              │
+│              Next.js Frontend (Port 3001)                        │
+│   React 19 · TanStack Query · Supabase Auth Client               │
+└──────────────────────────┬──────────────────────────────────────┘
+                           │ HTTPS / REST (JWT Bearer Token)
+                           ▼
+┌─────────────────────────────────────────────────────────────────┐
+│              NestJS Backend API (Port 3000)                      │
+│   api/v1 · RBAC Guards · Validation · Swagger                    │
+└──────────┬──────────────────────────────┬───────────────────────┘
+           │                              │
+           ▼                              ▼
+┌──────────────────────┐    ┌───────────────────────────────────┐
+│  PostgreSQL (Supabase)│    │  Supabase Auth + Storage           │
+│  TypeORM entities     │    │  JWT tokens · submission files     │
+└──────────────────────┘    └───────────────────────────────────┘</pre>
+
+<h3>Request flow (live mode)</h3>
+<ol>
+  <li>User signs in via <strong>Supabase Auth</strong> on the frontend</li>
+  <li>Frontend receives a <strong>JWT access token</strong></li>
+  <li>Every API call includes <code>Authorization: Bearer &lt;token&gt;</code></li>
+  <li>Backend <strong>JwtAuthGuard</strong> validates the token with Supabase</li>
+  <li><strong>PermissionsGuard</strong> checks role-based permissions (RBAC)</li>
+  <li><strong>Service layer</strong> applies data scoping (user sees only their data)</li>
+  <li>Response returned as JSON with consistent envelope</li>
+</ol>
+
+<h1>3. Technology Stack</h1>
+<table>
+  <tr><th>Layer</th><th>Technologies</th></tr>
+  <tr><td>Frontend</td><td>Next.js 16, React 19, TypeScript, Tailwind CSS 4, TanStack Query, Recharts</td></tr>
+  <tr><td>Backend</td><td>NestJS 10, TypeORM, class-validator, Swagger, Helmet, Throttler</td></tr>
+  <tr><td>Database</td><td>PostgreSQL (hosted on Supabase)</td></tr>
+  <tr><td>Authentication</td><td>Supabase Auth (email/password)</td></tr>
+  <tr><td>File storage</td><td>Supabase Storage (submission uploads)</td></tr>
+  <tr><td>i18n</td><td>English + Arabic locale files</td></tr>
+</table>
+
+<div class="page-break"></div>
+
+<h1>4. User Roles &amp; Permissions</h1>
+<table>
+  <tr><th>Role</th><th>Primary responsibility</th></tr>
+  <tr><td><span class="badge">Student</span></td><td>View own group, project, submit work, see grades &amp; meetings</td></tr>
+  <tr><td><span class="badge">Advisor</span></td><td>Supervise assigned groups, review submissions, schedule meetings, grade</td></tr>
+  <tr><td><span class="badge">Coordinator</span></td><td>Manage departments, groups, projects, students</td></tr>
+  <tr><td><span class="badge">Admin</span></td><td>Full system access including audit, reports, user management</td></tr>
+</table>
+
+<h2>Navigation access by role</h2>
+<table>
+  <tr><th>Page</th><th>Student</th><th>Advisor</th><th>Coordinator</th><th>Admin</th></tr>
+  <tr><td>Dashboard</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td></tr>
+  <tr><td>Projects</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td></tr>
+  <tr><td>Groups</td><td class="cross">—</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td></tr>
+  <tr><td>Students</td><td class="cross">—</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td></tr>
+  <tr><td>Submissions</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td></tr>
+  <tr><td>Evaluations</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td></tr>
+  <tr><td>Meetings</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td></tr>
+  <tr><td>Departments</td><td class="cross">—</td><td class="cross">—</td><td class="check">✓</td><td class="check">✓</td></tr>
+  <tr><td>Reports</td><td class="cross">—</td><td class="cross">—</td><td class="check">✓</td><td class="check">✓</td></tr>
+  <tr><td>Audit Log</td><td class="cross">—</td><td class="cross">—</td><td class="check">✓</td><td class="check">✓</td></tr>
+  <tr><td>Notifications</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td></tr>
+  <tr><td>Settings</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td></tr>
+</table>
+
+<h2>Data scoping rules</h2>
+<ul>
+  <li><strong>Student</strong> — sees only their group, project's submissions/meetings/grades</li>
+  <li><strong>Advisor</strong> — sees only groups/projects assigned via project_advisor table</li>
+  <li><strong>Coordinator / Admin</strong> — sees all records; can mutate groups, projects, departments</li>
+</ul>
+
+<h1>5. Authentication Flow</h1>
+<pre class="diagram">[Landing Page] → [Login Page]
+       │
+       ├─ Live: Enter email + password
+       │         └─ Supabase signInWithPassword()
+       │         └─ JWT stored in session → Redirect to /dashboard
+       │
+       └─ Demo: ?demo=true
+                 └─ Mock user profile loaded locally (no API)</pre>
+
+<h1>6. Demo Mode vs Live Mode</h1>
+<table>
+  <tr><th>Aspect</th><th>Demo Mode</th><th>Live Mode</th></tr>
+  <tr><td>Trigger</td><td>?demo=true&amp;role=Student</td><td>Normal login</td></tr>
+  <tr><td>Backend required</td><td>No</td><td>Yes (port 3000)</td></tr>
+  <tr><td>Data source</td><td>Mock data in browser</td><td>PostgreSQL via REST API</td></tr>
+  <tr><td>File upload</td><td>Simulated</td><td>Supabase Storage</td></tr>
+  <tr><td>Best for</td><td>UI walkthrough, viva offline</td><td>Full integration demo</td></tr>
+</table>
+
+<div class="page-break"></div>
+
+<h1>7. End-to-End Project Lifecycle</h1>
+<pre class="diagram">Phase 1: SETUP (Coordinator/Admin)
+──────────────────────────────────
+Create Departments → Create Projects
+       ↓
+Register Students → Form Groups → Assign Members + Leader
+       ↓
+Assign Project to Group → Assign Advisor(s) to Project
+
+Phase 2: ACTIVE PROJECT (Student + Advisor)
+────────────────────────────────────────────
+Student submits Proposal → Advisor reviews
+       ↓
+Advisor schedules Meetings → Students notified
+       ↓
+Student submits Progress Reports → Advisor reviews
+       ↓
+Advisor records Evaluation grades → Publishes → Students notified
+
+Phase 3: COMPLETION
+───────────────────
+Final submission approved → Project status: Completed
+       ↓
+Reports &amp; Audit log available to Admin/Coordinator</pre>
+
+<h3>Status transitions</h3>
+<p><strong>Projects:</strong> Pending → Approved → Ongoing → Completed (or Rejected / Archived)</p>
+<p><strong>Submissions:</strong> Pending → Approved | Rejected | RevisionRequired</p>
+
+<h1>8. Role-Based Walkthroughs</h1>
+
+<h2>8.1 Student Flow</h2>
+<ol>
+  <li>Login as <code>student1@fypms.test</code></li>
+  <li><strong>Dashboard</strong> — project, group, supervisor, next meeting, grades</li>
+  <li><strong>Projects</strong> — view assigned project only</li>
+  <li><strong>Submissions</strong> — upload files; track review status</li>
+  <li><strong>Meetings</strong> — view scheduled meetings (read-only)</li>
+  <li><strong>Evaluations</strong> — view published grades only</li>
+  <li><strong>Notifications</strong> — unread badge; mark as read</li>
+</ol>
+<p><strong>Journey:</strong> Dashboard → Submissions → Upload → Notifications (reviewed) → Evaluations (grades)</p>
+
+<h2>8.2 Advisor Flow</h2>
+<ol>
+  <li>Login as <code>advisor@fypms.test</code></li>
+  <li><strong>Dashboard</strong> — assigned projects, meetings, pending submissions</li>
+  <li><strong>Groups</strong> — view assigned groups only</li>
+  <li><strong>Submissions</strong> — review (approve/reject/revision)</li>
+  <li><strong>Meetings</strong> — create meetings (notifies students)</li>
+  <li><strong>Evaluations</strong> — record and publish marks</li>
+</ol>
+<p><strong>Journey:</strong> Submissions (review) → Meetings (schedule) → Evaluations (grade &amp; publish)</p>
+
+<h2>8.3 Coordinator / Admin Flow</h2>
+<ol>
+  <li>Login as <code>coordinator@fypms.test</code> or <code>admin@fypms.test</code></li>
+  <li><strong>Dashboard</strong> — institution-wide statistics</li>
+  <li><strong>Groups</strong> — create, manage members, assign projects</li>
+  <li><strong>Projects</strong> — full CRUD</li>
+  <li><strong>Departments</strong> — manage departments</li>
+  <li><strong>Reports</strong> — summaries and charts</li>
+  <li><strong>Audit</strong> — system activity log</li>
+</ol>
+
+<div class="page-break"></div>
+
+<h1>9. Module-by-Module Flow</h1>
+
+<h2>9.1 Submissions</h2>
+<pre class="diagram">Student uploads file → status: Pending
+Advisor reviews → Approved / RevisionRequired / Rejected
+                → Notification sent to group
+                → Audit log entry created</pre>
+<p><strong>API:</strong> POST /submissions/upload · GET /submissions · PUT /submissions/:id/review</p>
+
+<h2>9.2 Meetings</h2>
+<p>Advisor creates meeting for assigned group → students receive notification → audit logged.</p>
+<p><strong>API:</strong> POST /meetings · GET /meetings/group/:groupId</p>
+
+<h2>9.3 Evaluations</h2>
+<p>Admin/Coordinator manage rubric templates. Advisors record group marks and publish. Students see published grades only.</p>
+<p><strong>API:</strong> GET /evaluations · POST /evaluations/group · PUT /evaluations/group/:id</p>
+
+<h2>9.4 Groups</h2>
+<p>Coordinator creates group → adds students → assigns one project per group.</p>
+<p><strong>API:</strong> GET /groups · POST /groups/:id/members · POST /groups/:id/project</p>
+
+<h2>9.5 Reports &amp; Audit</h2>
+<p>Admin/Coordinator access aggregated reports and audit trail of system mutations.</p>
+
+<h1>10. API &amp; Security Model</h1>
+<ul>
+  <li><strong>RBAC</strong> — each endpoint requires specific permissions</li>
+  <li><strong>Scoping</strong> — findAllForUser / findByIdForUser filters data per role</li>
+  <li><strong>Reference API</strong> — GET /reference returns role-safe lookup data</li>
+  <li><strong>Smoke tests</strong> — automated tests for all 4 roles + negative access checks</li>
+</ul>
+
+<h1>11. Database Setup</h1>
+<pre class="diagram">cd backend
+npm run db:push      # Apply schema
+npm run db:storage   # Create Supabase bucket
+npm run db:seed      # Insert demo data + auth users
+npm run smoke        # Verify API (backend running)</pre>
+
+<h3>Key entities</h3>
+<p>person · user_account · student · advisor · project · student_group · group_student · group_project · project_advisor · submission · meeting · evaluation · group_evaluation · notification · audit_log</p>
+
+<h1>12. Setup &amp; Deployment</h1>
+<pre class="diagram"># Terminal 1 — API
+cd backend && npm run dev
+
+# Terminal 2 — UI
+cd frontend && npm run dev
+
+# Docker (optional)
+docker compose up --build</pre>
+
+<div class="page-break"></div>
+
+<h1>13. Viva / Demo Script (15 minutes)</h1>
+<table>
+  <tr><th>Time</th><th>Section</th><th>What to show</th></tr>
+  <tr><td>0:00</td><td>Introduction</td><td>Problem: FYP management is fragmented across spreadsheets/email</td></tr>
+  <tr><td>1:00</td><td>Architecture</td><td>Show 3-tier diagram (section 2)</td></tr>
+  <tr><td>2:00</td><td>Demo mode</td><td>?demo=true&amp;role=Student — no backend needed</td></tr>
+  <tr><td>4:00</td><td>Student view</td><td>Dashboard → Submissions → Notifications</td></tr>
+  <tr><td>6:00</td><td>Advisor view</td><td>Switch role → Review submission → Schedule meeting</td></tr>
+  <tr><td>8:00</td><td>Coordinator view</td><td>Groups management → Reports</td></tr>
+  <tr><td>10:00</td><td>Live mode</td><td>Real login + Swagger API docs at /docs</td></tr>
+  <tr><td>12:00</td><td>Security</td><td>RBAC, data scoping, smoke tests</td></tr>
+  <tr><td>14:00</td><td>Q&amp;A</td><td>Refer to this document</td></tr>
+</table>
+
+<h3>Key talking points</h3>
+<ul>
+  <li><strong>Why Supabase?</strong> Managed auth + storage + Postgres</li>
+  <li><strong>Why RBAC + scoping?</strong> Defense in depth at guard and service layers</li>
+  <li><strong>Demo vs Live</strong> — same UI; isDemo switches data source</li>
+  <li><strong>i18n</strong> — EN/AR for bilingual universities</li>
+</ul>
+
+<h1>14. Appendix: Login Credentials</h1>
+<p><em>Available after running <code>npm run db:seed</code></em></p>
+<table>
+  <tr><th>Role</th><th>Email</th><th>Password</th></tr>
+  <tr><td>Admin</td><td>admin@fypms.test</td><td>Admin@123</td></tr>
+  <tr><td>Coordinator</td><td>coordinator@fypms.test</td><td>Coord@123</td></tr>
+  <tr><td>Advisor</td><td>advisor@fypms.test</td><td>Advisor@123</td></tr>
+  <tr><td>Student</td><td>student1@fypms.test</td><td>Student@123</td></tr>
+</table>
+
+<table>
+  <tr><th>Purpose</th><th>URL</th></tr>
+  <tr><td>Login</td><td>http://localhost:3001/login</td></tr>
+  <tr><td>Student demo</td><td>http://localhost:3001/dashboard?demo=true&amp;role=Student</td></tr>
+  <tr><td>Advisor demo</td><td>http://localhost:3001/dashboard?demo=true&amp;role=Advisor</td></tr>
+  <tr><td>Admin demo</td><td>http://localhost:3001/dashboard?demo=true&amp;role=Admin</td></tr>
+  <tr><td>API Swagger</td><td>http://localhost:3000/docs</td></tr>
+</table>
+
+<footer>
+  FYPMS — Final Year Project Management System &nbsp;|&nbsp; Complete System Walkthrough &nbsp;|&nbsp; Version 1.0
+</footer>
+
+</body>
+</html>

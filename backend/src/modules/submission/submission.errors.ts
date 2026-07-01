@@ -1,0 +1,4 @@
+export const SubmissionErrors = {
+  PROJECT_READ_ONLY: 'SUBMISSION_PROJECT_READ_ONLY',
+  ACCESS_DENIED: 'SUBMISSION_ACCESS_DENIED',
+} as const;

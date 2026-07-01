@@ -1,0 +1,43 @@
+# Deploy the NestJS API on Render (free tier available).
+# Frontend deploys separately on Vercel — see README.md.
+#
+# 1. Push repo to GitHub
+# 2. Render → New → Blueprint → connect this repo
+# 3. Fill secret env vars in the Render dashboard
+# 4. Set NEXT_PUBLIC_API_URL on Vercel to the Render service URL + /api/v1
+
+services:
+  - type: web
+    name: fypms-api
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: API_PREFIX
+        value: api/v1
+      - key: DATABASE_URL
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: SUPABASE_JWT_SECRET
+        sync: false
+      - key: SUPABASE_STORAGE_BUCKET
+        value: submissions
+      - key: DATABASE_SSL
+        value: "true"
+      - key: DATABASE_POOLER
+        value: "true"
+      - key: CORS_ALLOW_VERCEL
+        value: "true"
+      - key: CORS_ORIGINS
+        sync: false

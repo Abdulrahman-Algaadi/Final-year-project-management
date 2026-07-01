@@ -1,0 +1,4 @@
+export const LookupErrors = {
+  DUPLICATE_VALUE: 'LOOKUP_DUPLICATE_VALUE',
+  INVALID_CATEGORY: 'LOOKUP_INVALID_CATEGORY',
+} as const;
