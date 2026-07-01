@@ -120,7 +120,10 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         setCachedAccessToken(session.access_token);
       }
       if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "TOKEN_REFRESHED") {
-        loadSession();
+        // Defer so auth cookies are committed before middleware / API reads session.
+        window.setTimeout(() => {
+          void loadSession();
+        }, 0);
       }
     });
 

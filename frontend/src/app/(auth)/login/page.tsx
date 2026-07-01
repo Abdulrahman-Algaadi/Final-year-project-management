@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { Mail, Lock, ArrowRight } from "lucide-react";
 import { AppLogo } from "@/components/shared/app-logo";
@@ -19,7 +19,6 @@ import { useTranslation } from "@/providers/locale-provider";
 import { toast } from "sonner";
 
 export default function LoginPage() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const { t } = useTranslation();
   const { user, loading: sessionLoading, setUser } = useSession();
@@ -38,9 +37,9 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (!sessionLoading && user) {
-      router.replace("/dashboard");
+      window.location.assign("/dashboard");
     }
-  }, [sessionLoading, user, router]);
+  }, [sessionLoading, user]);
 
   const validate = () => {
     const next: typeof errors = {};
@@ -65,9 +64,9 @@ export default function LoginPage() {
       setCachedAccessToken(data.session.access_token);
       const profile = await loginCallback(data.session.access_token);
       setUser(profile);
-      router.refresh();
       toast.success(t("dashboard.welcome"));
-      router.replace("/dashboard");
+      // Full navigation so middleware reads Supabase auth cookies (router.replace races cookie write).
+      window.location.assign("/dashboard");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Login failed");
     } finally {
