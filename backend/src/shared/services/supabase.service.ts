@@ -2,9 +2,17 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { createClient, SupabaseClient, User } from '@supabase/supabase-js';
+import WebSocket from 'ws';
 import { TtlCache, ttlUntilJwtExp } from '@/shared/utils/ttl-cache.util';
 
 const JWT_CACHE_MAX_MS = 5 * 60_000;
+
+const supabaseClientOptions = {
+  auth: { autoRefreshToken: false, persistSession: false },
+  realtime: {
+    transport: WebSocket as unknown as typeof globalThis.WebSocket,
+  },
+};
 
 @Injectable()
 export class SupabaseService {
@@ -20,10 +28,8 @@ export class SupabaseService {
     const anonKey = this.config.getOrThrow<string>('supabase.anonKey');
     const serviceKey = this.config.getOrThrow<string>('supabase.serviceRoleKey');
 
-    this.client = createClient(url, anonKey);
-    this.adminClient = createClient(url, serviceKey, {
-      auth: { autoRefreshToken: false, persistSession: false },
-    });
+    this.client = createClient(url, anonKey, supabaseClientOptions);
+    this.adminClient = createClient(url, serviceKey, supabaseClientOptions);
   }
 
   getClient(): SupabaseClient {
