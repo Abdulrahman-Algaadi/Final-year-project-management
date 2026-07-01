@@ -7,15 +7,15 @@ import {
   fetchDepartments,
   updateDepartment,
 } from "@/lib/api/services/departments.service";
-import { useSession } from "@/providers/session-provider";
+import { useApiReady } from "@/hooks/use-api-ready";
 import type { ListQuery } from "@/types/api";
 
 export function useDepartments(query?: ListQuery) {
-  const { isDemo } = useSession();
+  const apiReady = useApiReady();
   return useQuery({
     queryKey: ["departments", query],
     queryFn: () => fetchDepartments(query),
-    enabled: !isDemo,
+    enabled: apiReady,
   });
 }
 

@@ -8,29 +8,29 @@ import {
   fetchGroupEvaluations,
   fetchGroupEvaluationsPaginated,
 } from "@/lib/api/services/evaluations.service";
-import { useSession } from "@/providers/session-provider";
+import { useApiReady } from "@/hooks/use-api-ready";
 import type { ListQuery } from "@/types/api";
 
 export function useEvaluations(query?: ListQuery) {
-  const { isDemo } = useSession();
+  const apiReady = useApiReady();
   return useQuery({
     queryKey: ["evaluations", "rubrics", query],
     queryFn: () => fetchEvaluations(query),
-    enabled: !isDemo,
+    enabled: apiReady,
   });
 }
 
 export function useEvaluationsPaginated(query?: ListQuery) {
-  const { isDemo } = useSession();
+  const apiReady = useApiReady();
   return useQuery({
     queryKey: ["evaluations", "rubrics", "paginated", query],
     queryFn: () => fetchEvaluationsPaginated(query),
-    enabled: !isDemo,
+    enabled: apiReady,
   });
 }
 
 export function useGroupEvaluations(groupId?: number, fetchAll = false) {
-  const { isDemo } = useSession();
+  const apiReady = useApiReady();
   return useQuery({
     queryKey: ["evaluations", "grades", groupId, fetchAll],
     queryFn: () => {
@@ -38,15 +38,15 @@ export function useGroupEvaluations(groupId?: number, fetchAll = false) {
       if (fetchAll) return fetchAllGroupEvaluations();
       return Promise.resolve([]);
     },
-    enabled: !isDemo && (fetchAll || groupId !== undefined),
+    enabled: apiReady && (fetchAll || groupId !== undefined),
   });
 }
 
 export function useGroupEvaluationsPaginated(query?: ListQuery) {
-  const { isDemo } = useSession();
+  const apiReady = useApiReady();
   return useQuery({
     queryKey: ["evaluations", "grades", "paginated", query],
     queryFn: () => fetchGroupEvaluationsPaginated(query),
-    enabled: !isDemo && query !== undefined,
+    enabled: apiReady && query !== undefined,
   });
 }

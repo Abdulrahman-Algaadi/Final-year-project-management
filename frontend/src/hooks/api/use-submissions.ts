@@ -9,24 +9,24 @@ import {
   reviewSubmission,
   uploadSubmissionFile,
 } from "@/lib/api/services/submissions.service";
-import { useSession } from "@/providers/session-provider";
+import { useApiReady } from "@/hooks/use-api-ready";
 import type { ListQuery } from "@/types/api";
 
 export function useSubmissions(query?: ListQuery, groupId?: number) {
-  const { isDemo } = useSession();
+  const apiReady = useApiReady();
   return useQuery({
     queryKey: ["submissions", query, groupId],
     queryFn: () => (groupId != null ? fetchSubmissionsByGroup(groupId) : fetchSubmissions(query)),
-    enabled: !isDemo && (groupId != null || query != null),
+    enabled: apiReady && (groupId != null || query != null),
   });
 }
 
 export function useSubmissionsPaginated(query?: ListQuery, enabled = true) {
-  const { isDemo } = useSession();
+  const apiReady = useApiReady();
   return useQuery({
     queryKey: ["submissions", "paginated", query],
     queryFn: () => fetchSubmissionsPaginated(query),
-    enabled: !isDemo && enabled,
+    enabled: apiReady && enabled,
   });
 }
 

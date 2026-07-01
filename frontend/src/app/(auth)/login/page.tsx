@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LanguageSwitcher } from "@/components/shared/language-switcher";
+import { setCachedAccessToken } from "@/lib/api/auth-token";
 import { createClient } from "@/lib/supabase/client";
 import { loginCallback } from "@/lib/api/services/auth.service";
 import { useSession } from "@/providers/session-provider";
@@ -20,7 +21,7 @@ export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { t } = useTranslation();
-  const { user, loading: sessionLoading, setUser, refresh } = useSession();
+  const { user, loading: sessionLoading, setUser } = useSession();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
@@ -58,9 +59,9 @@ export default function LoginPage() {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
       if (!data.session?.access_token) throw new Error("No session returned");
+      setCachedAccessToken(data.session.access_token);
       const profile = await loginCallback(data.session.access_token);
       setUser(profile);
-      await refresh();
       router.refresh();
       toast.success(t("dashboard.welcome"));
       router.replace("/dashboard");

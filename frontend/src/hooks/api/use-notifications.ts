@@ -8,37 +8,37 @@ import {
   markAllNotificationsAsRead,
   markNotificationAsRead,
 } from "@/lib/api/services/notifications.service";
-import { useSession } from "@/providers/session-provider";
+import { useApiReady } from "@/hooks/use-api-ready";
 
 import type { ListQuery } from "@/types/api";
 
 export function useNotifications() {
-  const { isDemo } = useSession();
+  const apiReady = useApiReady();
 
   return useQuery({
     queryKey: ["notifications", "me"],
     queryFn: fetchMyNotifications,
-    enabled: !isDemo,
+    enabled: apiReady,
   });
 }
 
 export function useNotificationsPaginated(query?: ListQuery) {
-  const { isDemo } = useSession();
+  const apiReady = useApiReady();
 
   return useQuery({
     queryKey: ["notifications", "me", "paginated", query],
     queryFn: () => fetchMyNotificationsPaginated(query),
-    enabled: !isDemo,
+    enabled: apiReady,
   });
 }
 
 export function useUnreadNotifications() {
-  const { isDemo } = useSession();
+  const apiReady = useApiReady();
 
   return useQuery({
     queryKey: ["notifications", "unread"],
     queryFn: fetchMyUnreadNotifications,
-    enabled: !isDemo,
+    enabled: apiReady,
   });
 }
 

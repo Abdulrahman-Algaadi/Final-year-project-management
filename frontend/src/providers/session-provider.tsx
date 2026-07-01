@@ -11,6 +11,7 @@ import {
 import { useSearchParams } from "next/navigation";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
+import { setCachedAccessToken } from "@/lib/api/auth-token";
 import { fetchProfile } from "@/lib/api/services/auth.service";
 import { invalidateReferenceCache } from "@/lib/api/services/reference.service";
 import { ApiError } from "@/lib/api/client";
@@ -65,6 +66,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
     const supabase = getSupabase();
     if (!supabase) {
+      setCachedAccessToken(null);
       setUser(null);
       setLoading(false);
       return;
@@ -77,15 +79,18 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
+        setCachedAccessToken(null);
         setUser(null);
         return;
       }
+      setCachedAccessToken(session.access_token);
       const profile = await fetchProfile(session.access_token);
       setUser(profile);
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         await supabase.auth.signOut();
       }
+      setCachedAccessToken(null);
       setUser(null);
     } finally {
       setLoading(false);
@@ -108,7 +113,12 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     const supabase = getSupabase();
     if (!supabase) return;
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === "SIGNED_OUT") {
+        setCachedAccessToken(null);
+      } else if (session?.access_token) {
+        setCachedAccessToken(session.access_token);
+      }
       if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "TOKEN_REFRESHED") {
         loadSession();
       }
@@ -128,6 +138,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       const supabase = getSupabase();
       if (supabase) await supabase.auth.signOut();
     }
+    setCachedAccessToken(null);
     setUser(null);
     invalidateReferenceCache();
   };

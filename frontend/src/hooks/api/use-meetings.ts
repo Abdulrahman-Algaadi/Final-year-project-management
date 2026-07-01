@@ -2,33 +2,33 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createMeeting, deleteMeeting, fetchMeetings, fetchMeetingsByGroup, fetchMeetingsPaginated, updateMeeting } from "@/lib/api/services/meetings.service";
-import { useSession } from "@/providers/session-provider";
+import { useApiReady } from "@/hooks/use-api-ready";
 import type { ListQuery } from "@/types/api";
 
 export function useMeetings(query?: ListQuery) {
-  const { isDemo } = useSession();
+  const apiReady = useApiReady();
   return useQuery({
     queryKey: ["meetings", query],
     queryFn: () => fetchMeetings(query),
-    enabled: !isDemo,
+    enabled: apiReady,
   });
 }
 
 export function useMeetingsByGroup(groupId?: number) {
-  const { isDemo } = useSession();
+  const apiReady = useApiReady();
   return useQuery({
     queryKey: ["meetings", "group", groupId],
     queryFn: () => fetchMeetingsByGroup(groupId!),
-    enabled: !isDemo && !!groupId,
+    enabled: apiReady && !!groupId,
   });
 }
 
 export function useMeetingsPaginated(query?: ListQuery, enabled = true) {
-  const { isDemo } = useSession();
+  const apiReady = useApiReady();
   return useQuery({
     queryKey: ["meetings", "paginated", query],
     queryFn: () => fetchMeetingsPaginated(query),
-    enabled: !isDemo && enabled,
+    enabled: apiReady && enabled,
   });
 }
 
