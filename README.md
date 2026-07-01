@@ -97,7 +97,7 @@ Vercel hosts the **Next.js app only**. The NestJS API must run elsewhere (Render
 
 1. **Push to GitHub** (ensure `.env` files are not committed).
 2. **Vercel** → [vercel.com/new](https://vercel.com/new) → Import repository.
-3. Set **Root Directory** to `frontend`.
+3. **Root Directory must be `frontend`** — do **not** select `backend` (NestJS does not run on Vercel).
 4. **Environment variables** (Production + Preview):
 
    | Variable | Example |
