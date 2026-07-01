@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { createClient, SupabaseClient, User } from '@supabase/supabase-js';
-import WebSocket from 'ws';
+import * as WebSocket from 'ws';
 import { TtlCache, ttlUntilJwtExp } from '@/shared/utils/ttl-cache.util';
 
 const JWT_CACHE_MAX_MS = 5 * 60_000;
