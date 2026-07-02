@@ -182,7 +182,7 @@ export class SubmissionService {
       tableName: 'submission',
       recordId: saved.id,
       actionType: AuditActionType.Update,
-      performedById: user.personId,
+      performedById: user.userAccountId,
     });
     await this.notificationService.notifyGroupMembers(
       entity.groupId,

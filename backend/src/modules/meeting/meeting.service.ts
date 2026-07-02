@@ -170,7 +170,7 @@ export class MeetingService {
       tableName: 'meeting',
       recordId: saved.id,
       actionType: AuditActionType.Insert,
-      performedById: user.personId,
+      performedById: user.userAccountId,
     });
     await this.notificationService.notifyGroupMembers(
       dto.groupId,
