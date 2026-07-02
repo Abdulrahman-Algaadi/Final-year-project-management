@@ -1,16 +1,17 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Trash2, UserPlus, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
+import { AsyncSearchCombobox } from "@/components/ui/async-search-combobox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useGroupMutations } from "@/hooks/api/use-group-mutations";
-import { useProjects } from "@/hooks/api/use-projects";
-import { useStudents } from "@/hooks/api/use-students";
 import { fetchGroupById } from "@/lib/api/services/groups.service";
+import { fetchProjectsPaginated } from "@/lib/api/services/projects.service";
+import { fetchStudentsPaginated } from "@/lib/api/services/students.service";
 import { fetchReferenceData } from "@/lib/api/services/reference.service";
 import { formatPersonName } from "@/lib/api/mappers/student.mapper";
 import { ACTIVE_STUDENT_STATUS_ID } from "@/lib/api/constants";
@@ -20,6 +21,8 @@ import { useTranslation } from "@/providers/locale-provider";
 import type { Group } from "@/types";
 import type { GroupDto } from "@/types/api";
 import type { DemoGroupMember } from "@/lib/data/mock-data";
+
+const PICKER_PAGE_SIZE = 25;
 
 interface GroupDetailDialogProps {
   group: Group | null;
@@ -69,15 +72,11 @@ export function GroupDetailDialog({ group, open, onOpenChange, canManage }: Grou
   const [loading, setLoading] = useState(false);
   const [studentId, setStudentId] = useState("");
   const [projectId, setProjectId] = useState("");
+  const [projectLabel, setProjectLabel] = useState("");
   const [groupName, setGroupName] = useState("");
   const [names, setNames] = useState<Record<number, string>>({});
 
   const { addMember, removeMember, assignProject, update, remove } = useGroupMutations();
-  const { data: apiStudents } = useStudents({ limit: 100 });
-  const { data: apiProjects } = useProjects({ limit: 100 });
-
-  const students = isDemo ? mockStudents : (apiStudents ?? []);
-  const projects = isDemo ? mockProjects : (apiProjects ?? []);
 
   useEffect(() => {
     if (group) setGroupName(group.groupName);
@@ -97,6 +96,7 @@ export function GroupDetailDialog({ group, open, onOpenChange, canManage }: Grou
       members.forEach((m) => { nameMap[m.studentId] = m.studentName; });
       setNames(nameMap);
       setProjectId(pid ? String(pid) : "");
+      setProjectLabel(pid ? (mockProjects.find((p) => p.id === pid)?.title ?? group.projectTitle ?? "") : "");
       setLoading(false);
       return;
     }
@@ -104,11 +104,17 @@ export function GroupDetailDialog({ group, open, onOpenChange, canManage }: Grou
     let cancelled = false;
     setLoading(true);
     fetchGroupById(group.id)
-      .then((dto) => { if (!cancelled) setDetail(dto); })
+      .then((dto) => {
+        if (cancelled) return;
+        setDetail(dto);
+        const pid = dto.project?.projectId;
+        setProjectId(pid ? String(pid) : "");
+        setProjectLabel(group.projectTitle ?? "");
+      })
       .catch(() => toast.error(t("states.loadError")))
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [open, group, isDemo, t, getDemoGroupMembers, getDemoGroupProjectId]);
+  }, [open, group, isDemo, t, getDemoGroupMembers, getDemoGroupProjectId, mockProjects, group?.projectTitle]);
 
   useEffect(() => {
     if (isDemo || !detail?.members?.length) return;
@@ -120,11 +126,78 @@ export function GroupDetailDialog({ group, open, onOpenChange, canManage }: Grou
         map[m.studentId] = formatPersonName(ref, m.studentId);
       });
       setNames(map);
+      const pid = detail.project?.projectId;
+      if (pid) {
+        setProjectLabel(ref.projects.get(pid)?.title ?? group?.projectTitle ?? "");
+      }
     });
     return () => { cancelled = true; };
-  }, [detail, isDemo]);
+  }, [detail, isDemo, group?.projectTitle]);
 
   const memberRows = useMemo(() => detail?.members ?? [], [detail]);
+  const memberStudentIds = useMemo(
+    () => new Set(memberRows.map((m) => m.studentId)),
+    [memberRows],
+  );
+
+  const demoStudentOptions = useMemo(
+    () =>
+      mockStudents
+        .filter((s) => !memberStudentIds.has(s.id))
+        .map((s) => ({
+          value: String(s.id),
+          label: `${s.firstName} ${s.lastName} (${s.registrationNo})`,
+          keywords: `${s.email} ${s.registrationNo}`,
+        })),
+    [mockStudents, memberStudentIds],
+  );
+
+  const demoProjectOptions = useMemo(
+    () =>
+      mockProjects.map((p) => ({
+        value: String(p.id),
+        label: p.title,
+        keywords: p.description ?? "",
+      })),
+    [mockProjects],
+  );
+
+  const searchStudents = useCallback(
+    async (query: string, page: number) => {
+      const result = await fetchStudentsPaginated({
+        search: query || undefined,
+        page,
+        limit: PICKER_PAGE_SIZE,
+      });
+      const options = result.items
+        .filter((s) => !memberStudentIds.has(s.id))
+        .map((s) => ({
+          value: String(s.id),
+          label: `${s.firstName} ${s.lastName} (${s.registrationNo})`,
+          keywords: `${s.email} ${s.registrationNo}`,
+        }));
+      const currentPage = result.meta?.page ?? page;
+      const totalPages = result.meta?.totalPages ?? 1;
+      return { options, hasMore: currentPage < totalPages };
+    },
+    [memberStudentIds],
+  );
+
+  const searchProjects = useCallback(async (query: string, page: number) => {
+    const result = await fetchProjectsPaginated({
+      search: query || undefined,
+      page,
+      limit: PICKER_PAGE_SIZE,
+    });
+    const options = result.items.map((p) => ({
+      value: String(p.id),
+      label: p.title,
+      keywords: p.description ?? "",
+    }));
+    const currentPage = result.meta?.page ?? page;
+    const totalPages = result.meta?.totalPages ?? 1;
+    return { options, hasMore: currentPage < totalPages };
+  }, []);
 
   const refreshDemoDetail = () => {
     if (!group || !isDemo) return;
@@ -181,6 +254,7 @@ export function GroupDetailDialog({ group, open, onOpenChange, canManage }: Grou
     if (isDemo) {
       assignDemoProject(group.id, Number(projectId));
       refreshDemoDetail();
+      setProjectLabel(mockProjects.find((p) => p.id === Number(projectId))?.title ?? "");
       toast.success(t("groups.projectAssigned"));
       return;
     }
@@ -190,6 +264,8 @@ export function GroupDetailDialog({ group, open, onOpenChange, canManage }: Grou
         projectId: Number(projectId),
       });
       setDetail(dto);
+      const ref = await fetchReferenceData();
+      setProjectLabel(ref.projects.get(Number(projectId))?.title ?? projectLabel);
       toast.success(t("groups.projectAssigned"));
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t("states.loadError"));
@@ -289,15 +365,30 @@ export function GroupDetailDialog({ group, open, onOpenChange, canManage }: Grou
                 <section className="space-y-2">
                   <h4 className="text-sm font-semibold">{t("groups.addMember")}</h4>
                   <div className="flex gap-2">
-                    <Select value={studentId} onChange={(e) => setStudentId(e.target.value)} className="flex-1">
-                      <option value="">{t("groups.selectStudent")}</option>
-                      {students.map((s) => (
-                        <option key={s.id} value={s.id}>
-                          {s.firstName} {s.lastName} ({s.registrationNo})
-                        </option>
-                      ))}
-                    </Select>
-                    <Button type="button" className="gap-1.5" onClick={() => void handleAddMember()} loading={!isDemo && addMember.isPending}>
+                    {isDemo ? (
+                      <Combobox
+                        options={demoStudentOptions}
+                        value={studentId}
+                        onValueChange={setStudentId}
+                        placeholder={t("groups.selectStudent")}
+                        searchPlaceholder={t("common.typeToSearch")}
+                        emptyMessage={t("common.noRecords")}
+                        className="flex-1"
+                      />
+                    ) : (
+                      <AsyncSearchCombobox
+                        value={studentId}
+                        onValueChange={setStudentId}
+                        onSearch={searchStudents}
+                        placeholder={t("groups.selectStudent")}
+                        searchPlaceholder={t("common.typeToSearch")}
+                        emptyMessage={t("common.noRecords")}
+                        loadMoreLabel={t("common.loadMore")}
+                        searchingLabel={t("common.searching")}
+                        className="flex-1"
+                      />
+                    )}
+                    <Button type="button" className="gap-1.5 shrink-0" onClick={() => void handleAddMember()} loading={!isDemo && addMember.isPending}>
                       <UserPlus className="size-4" />
                       {t("common.create")}
                     </Button>
@@ -307,13 +398,37 @@ export function GroupDetailDialog({ group, open, onOpenChange, canManage }: Grou
                 <section className="space-y-2">
                   <h4 className="text-sm font-semibold">{t("groups.assignProject")}</h4>
                   <div className="flex gap-2">
-                    <Select value={projectId} onChange={(e) => setProjectId(e.target.value)} className="flex-1">
-                      <option value="">{t("groups.selectProject")}</option>
-                      {projects.map((p) => (
-                        <option key={p.id} value={p.id}>{p.title}</option>
-                      ))}
-                    </Select>
-                    <Button type="button" onClick={() => void handleAssignProject()} loading={!isDemo && assignProject.isPending}>
+                    {isDemo ? (
+                      <Combobox
+                        options={demoProjectOptions}
+                        value={projectId}
+                        onValueChange={(value) => {
+                          setProjectId(value);
+                          setProjectLabel(demoProjectOptions.find((o) => o.value === value)?.label ?? "");
+                        }}
+                        placeholder={t("groups.selectProject")}
+                        searchPlaceholder={t("common.typeToSearch")}
+                        emptyMessage={t("common.noRecords")}
+                        className="flex-1"
+                      />
+                    ) : (
+                      <AsyncSearchCombobox
+                        value={projectId}
+                        onValueChange={(value, label) => {
+                          setProjectId(value);
+                          if (label) setProjectLabel(label);
+                        }}
+                        onSearch={searchProjects}
+                        selectedLabel={projectLabel}
+                        placeholder={t("groups.selectProject")}
+                        searchPlaceholder={t("common.typeToSearch")}
+                        emptyMessage={t("common.noRecords")}
+                        loadMoreLabel={t("common.loadMore")}
+                        searchingLabel={t("common.searching")}
+                        className="flex-1"
+                      />
+                    )}
+                    <Button type="button" className="shrink-0" onClick={() => void handleAssignProject()} loading={!isDemo && assignProject.isPending}>
                       {t("common.save")}
                     </Button>
                   </div>

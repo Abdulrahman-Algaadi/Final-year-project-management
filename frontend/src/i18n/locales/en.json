@@ -28,7 +28,10 @@
     "previous": "Previous",
     "next": "Next",
     "pageOf": "Page {page} of {totalPages}",
-    "totalCount": "{count} total"
+    "totalCount": "{count} total",
+    "typeToSearch": "Type name or ID to search...",
+    "loadMore": "Load more",
+    "searching": "Searching..."
   },
   "nav": {
     "dashboard": "Dashboard",

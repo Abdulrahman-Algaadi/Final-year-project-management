@@ -28,7 +28,10 @@
     "previous": "السابق",
     "next": "التالي",
     "pageOf": "صفحة {page} من {totalPages}",
-    "totalCount": "{count} إجمالي"
+    "totalCount": "{count} إجمالي",
+    "typeToSearch": "اكتب الاسم أو الرقم للبحث...",
+    "loadMore": "تحميل المزيد",
+    "searching": "جاري البحث..."
   },
   "nav": {
     "dashboard": "لوحة التحكم",
