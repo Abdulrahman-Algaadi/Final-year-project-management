@@ -5,18 +5,14 @@ import {
   ManyToOne,
   OneToMany,
   OneToOne,
-  PrimaryColumn,
 } from 'typeorm';
-import { SoftDeleteEntity } from './base.entity';
+import { PersonLinkedEntity } from './base.entity';
 import { Person } from './person.entity';
 import { Department, Semester } from './department.entity';
 import { GroupStudent } from './group-student.entity';
 
 @Entity('student')
-export class Student extends SoftDeleteEntity {
-  @PrimaryColumn()
-  id!: number;
-
+export class Student extends PersonLinkedEntity {
   @OneToOne(() => Person, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'id' })
   person!: Person;

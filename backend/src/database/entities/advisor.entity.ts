@@ -5,9 +5,8 @@ import {
   ManyToOne,
   OneToMany,
   OneToOne,
-  PrimaryColumn,
 } from 'typeorm';
-import { SoftDeleteEntity } from './base.entity';
+import { PersonLinkedEntity } from './base.entity';
 import { Person } from './person.entity';
 import { Department, Lookup } from './department.entity';
 import { ProjectAdvisor } from './project-advisor.entity';
@@ -15,10 +14,7 @@ import { GroupEvaluation } from './group-evaluation.entity';
 import { Meeting } from './meeting.entity';
 
 @Entity('advisor')
-export class Advisor extends SoftDeleteEntity {
-  @PrimaryColumn()
-  id!: number;
-
+export class Advisor extends PersonLinkedEntity {
   @OneToOne(() => Person, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'id' })
   person!: Person;

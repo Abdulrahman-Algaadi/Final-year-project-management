@@ -118,32 +118,44 @@ export class SupabaseService {
   async ensureAuthUser(email: string, password: string): Promise<string> {
     const admin = this.adminClient.auth.admin;
     const normalized = email.trim().toLowerCase();
-    const { data: listed, error: listError } = await admin.listUsers();
-    if (listError) {
-      throw new Error(`Failed to list auth users: ${listError.message}`);
-    }
-
-    const existing = listed.users.find((u) => u.email?.toLowerCase() === normalized);
-    if (existing) {
-      const { error } = await admin.updateUserById(existing.id, {
-        password,
-        email_confirm: true,
-      });
-      if (error) {
-        throw new Error(`Failed to update auth user: ${error.message}`);
-      }
-      return existing.id;
-    }
 
     const { data, error } = await admin.createUser({
       email: normalized,
       password,
       email_confirm: true,
     });
-    if (error || !data.user) {
+    if (!error && data.user) {
+      return data.user.id;
+    }
+
+    const message = error?.message?.toLowerCase() ?? '';
+    const alreadyExists =
+      message.includes('already') ||
+      message.includes('registered') ||
+      message.includes('exists');
+
+    if (!alreadyExists) {
       throw new Error(`Failed to create auth user: ${error?.message ?? 'unknown'}`);
     }
-    return data.user.id;
+
+    const { data: listed, error: listError } = await admin.listUsers();
+    if (listError) {
+      throw new Error(`Failed to list auth users: ${listError.message}`);
+    }
+
+    const existing = listed.users.find((u) => u.email?.toLowerCase() === normalized);
+    if (!existing) {
+      throw new Error(`Auth user exists but could not be resolved for ${normalized}`);
+    }
+
+    const { error: updateError } = await admin.updateUserById(existing.id, {
+      password,
+      email_confirm: true,
+    });
+    if (updateError) {
+      throw new Error(`Failed to update auth user: ${updateError.message}`);
+    }
+    return existing.id;
   }
 
   async updateAuthUserPassword(authUserId: string, password: string): Promise<void> {
