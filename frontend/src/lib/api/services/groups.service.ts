@@ -50,11 +50,15 @@ export async function deleteGroup(id: number): Promise<void> {
 
 export async function addGroupMember(
   groupId: number,
-  input: { studentId: number; statusId?: number; isLeader?: boolean },
+  input: { studentId: number; isLeader?: boolean },
 ): Promise<GroupDto> {
+  const body: { studentId: number; isLeader?: boolean } = { studentId: input.studentId };
+  if (input.isLeader !== undefined) {
+    body.isLeader = input.isLeader;
+  }
   return apiClient<GroupDto>(`/groups/${groupId}/members`, {
     method: "POST",
-    body: JSON.stringify(input),
+    body: JSON.stringify(body),
   });
 }
 

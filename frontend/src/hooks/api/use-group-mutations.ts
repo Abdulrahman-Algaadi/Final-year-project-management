@@ -21,14 +21,12 @@ export function useGroupMutations() {
     mutationFn: ({
       groupId,
       studentId,
-      statusId,
       isLeader,
     }: {
       groupId: number;
       studentId: number;
-      statusId?: number;
       isLeader?: boolean;
-    }) => addGroupMember(groupId, { studentId, statusId, isLeader }),
+    }) => addGroupMember(groupId, { studentId, isLeader }),
     onSuccess: invalidate,
   });
 

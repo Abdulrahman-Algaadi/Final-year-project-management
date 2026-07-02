@@ -248,10 +248,9 @@ export class GroupService {
   private async resolveMemberStatusId(statusId?: number): Promise<number> {
     if (statusId !== undefined) {
       const lookup = await this.lookupRepository.findById(statusId);
-      if (!lookup || lookup.category !== LookupCategory.StudentStatus) {
-        throw DomainException.badRequest('Invalid student status', GroupErrors.INVALID_STATUS);
+      if (lookup?.category === LookupCategory.StudentStatus) {
+        return statusId;
       }
-      return statusId;
     }
 
     const active = await this.lookupRepository.findByCategoryAndValue(
