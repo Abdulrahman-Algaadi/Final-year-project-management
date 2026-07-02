@@ -96,6 +96,7 @@ export class MeetingService {
       { ...options, sortBy: options.sortBy ?? 'meetingDate' },
       'meeting',
       ['location', 'notes'],
+      ['advisor'],
     );
     return { items: this.mapper.toResponseList(items), meta };
   }
@@ -165,6 +166,7 @@ export class MeetingService {
     } as Meeting);
 
     const saved = await this.repository.save(entity);
+    const reloaded = await this.repository.findById(saved.id, ['advisor', 'advisor.person']);
 
     await this.auditService.log({
       tableName: 'meeting',
@@ -178,7 +180,7 @@ export class MeetingService {
       `A new meeting has been scheduled for ${saved.meetingDate.toISOString()}.`,
     );
 
-    return this.mapper.toResponse(saved);
+    return this.mapper.toResponse(reloaded ?? saved);
   }
 
   async update(user: AuthenticatedUser, id: number, dto: UpdateMeetingDto): Promise<MeetingResponseDto> {

@@ -14,6 +14,8 @@ export class MeetingMapper {
       notes: entity.notes,
       status: entity.status,
       onlineLink: entity.onlineLink,
+      advisorFirstName: entity.advisor?.person?.firstName ?? undefined,
+      advisorLastName: entity.advisor?.person?.lastName ?? undefined,
     };
   }
 

@@ -24,4 +24,10 @@ export class MeetingResponseDto {
 
   @ApiPropertyOptional()
   onlineLink?: string;
+
+  @ApiPropertyOptional()
+  advisorFirstName?: string;
+
+  @ApiPropertyOptional()
+  advisorLastName?: string;
 }

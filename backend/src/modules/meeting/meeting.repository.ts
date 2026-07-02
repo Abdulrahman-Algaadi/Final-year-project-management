@@ -14,7 +14,11 @@ export class MeetingRepository extends BaseRepository<Meeting> {
   }
 
   async findByGroupId(groupId: number): Promise<Meeting[]> {
-    return this.repository.find({ where: { groupId }, order: { meetingDate: 'DESC' } });
+    return this.repository.find({
+      where: { groupId },
+      relations: ['advisor', 'advisor.person'],
+      order: { meetingDate: 'DESC' },
+    });
   }
 
   async findAllForGroup(
@@ -22,6 +26,7 @@ export class MeetingRepository extends BaseRepository<Meeting> {
     options: QueryOptions,
   ): Promise<{ items: Meeting[]; meta: PaginationMeta }> {
     const qb = this.repository.createQueryBuilder('meeting').where('meeting.group_id = :groupId', { groupId });
+    qb.leftJoinAndSelect('meeting.advisor', 'advisor').leftJoinAndSelect('advisor.person', 'advisor_person');
 
     applySoftDeleteFilter(qb, 'meeting', options.includeDeleted);
 
@@ -58,6 +63,7 @@ export class MeetingRepository extends BaseRepository<Meeting> {
     const qb = this.repository.createQueryBuilder('meeting').where('meeting.advisor_id = :advisorId', {
       advisorId,
     });
+    qb.leftJoinAndSelect('meeting.advisor', 'advisor').leftJoinAndSelect('advisor.person', 'advisor_person');
 
     applySoftDeleteFilter(qb, 'meeting', options.includeDeleted);
 

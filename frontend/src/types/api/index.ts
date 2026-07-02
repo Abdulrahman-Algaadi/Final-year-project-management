@@ -141,6 +141,8 @@ export interface MeetingDto {
   notes?: string;
   status: string;
   onlineLink?: string;
+  advisorFirstName?: string;
+  advisorLastName?: string;
 }
 
 export interface AdvisorDto {

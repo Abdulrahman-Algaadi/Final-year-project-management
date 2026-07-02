@@ -9,6 +9,7 @@ import { GroupService } from '@/modules/group/group.service';
 import { ProjectService } from '@/modules/project/project.service';
 import { SemesterService } from '@/modules/semester/semester.service';
 import { StudentService } from '@/modules/student/student.service';
+import { AdvisorResponseDto } from '@/modules/advisor/dto/advisor-response.dto';
 import { ReferenceResponseDto } from './dto/reference-response.dto';
 
 const LOAD_ALL = { page: 1, limit: 500 };
@@ -51,7 +52,7 @@ export class ReferenceService {
         : Promise.resolve([]),
       this.projectService.findAllForUser(user, LOAD_ALL).then((r) => r.items),
       this.evaluationService.findAll(LOAD_ALL).then((r) => r.items),
-      privileged ? this.advisorService.findAll(LOAD_ALL).then((r) => r.items) : Promise.resolve([]),
+      this.loadAdvisors(user),
     ]);
 
     let groups: { id: number; groupName: string }[] = [];
@@ -89,5 +90,43 @@ export class ReferenceService {
         lastName: a.lastName ?? '',
       })),
     };
+  }
+
+  private async loadAdvisors(user: AuthenticatedUser): Promise<AdvisorResponseDto[]> {
+    const privileged = user.role === UserRole.Admin || user.role === UserRole.Coordinator;
+
+    if (privileged) {
+      return (await this.advisorService.findAll(LOAD_ALL)).items;
+    }
+
+    if (user.role === UserRole.Advisor) {
+      try {
+        const advisor = await this.advisorService.findById(user.personId);
+        return [advisor];
+      } catch {
+        return [];
+      }
+    }
+
+    if (user.role === UserRole.Student) {
+      try {
+        const own = await this.groupService.findOwn(user);
+        const advisorIds = [...new Set((own.advisors ?? []).map((assignment) => assignment.advisorId))];
+        const advisors = await Promise.all(
+          advisorIds.map(async (id) => {
+            try {
+              return await this.advisorService.findById(id);
+            } catch {
+              return null;
+            }
+          }),
+        );
+        return advisors.filter((advisor): advisor is AdvisorResponseDto => advisor != null);
+      } catch {
+        return [];
+      }
+    }
+
+    return [];
   }
 }
