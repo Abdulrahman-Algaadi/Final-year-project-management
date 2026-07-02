@@ -7,8 +7,8 @@ import { DomainException } from '@/shared/exceptions/domain.exception';
 import { SupabaseService } from '@/shared/services/supabase.service';
 import { UserRole } from '@/shared/types/enums';
 import {
+  buildStudentAuthEmail,
   defaultStudentUsername,
-  resolveStudentAuthEmail,
 } from '@/shared/utils/student-auth.util';
 
 @Injectable()
@@ -29,7 +29,8 @@ export class StudentAccountService {
     firstName?: string | null,
     lastName?: string | null,
   ): Promise<void> {
-    const authEmail = resolveStudentAuthEmail(registrationNo, contactEmail);
+    const trimmedEmail = contactEmail?.trim();
+    const authEmail = trimmedEmail ?? buildStudentAuthEmail(registrationNo);
     const username = defaultStudentUsername(registrationNo);
 
     const existingAccount = await this.userAccountRepo.findOne({ where: { personId } });
@@ -40,12 +41,17 @@ export class StudentAccountService {
 
     const authUserId = await this.supabase.ensureAuthUser(authEmail, password);
 
-    await this.personRepo.update(personId, {
-      authUserId,
-      email: contactEmail?.trim() || authEmail,
-      firstName: firstName?.trim() || undefined,
-      lastName: lastName?.trim() || undefined,
-    });
+    const personUpdate: Partial<Person> = { authUserId };
+    if (trimmedEmail) {
+      personUpdate.email = trimmedEmail;
+    }
+    if (firstName?.trim()) {
+      personUpdate.firstName = firstName.trim();
+    }
+    if (lastName?.trim()) {
+      personUpdate.lastName = lastName.trim();
+    }
+    await this.personRepo.update(personId, personUpdate);
 
     if (existingAccount) {
       existingAccount.authUserId = authUserId;

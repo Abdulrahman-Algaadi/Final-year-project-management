@@ -162,7 +162,7 @@
     "add": "Add student",
     "edit": "Edit student",
     "createTitle": "Add student",
-    "createDesc": "Create a student record and login (registration number + password).",
+    "createDesc": "Create a student record and login (registration number + password). Email is not required.",
     "editTitle": "Edit student",
     "editDesc": "Update student details or reset password.",
     "created": "Student created",

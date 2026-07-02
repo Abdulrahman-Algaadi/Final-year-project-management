@@ -58,7 +58,9 @@ export function StudentCard({ student, canManage, onEdit }: StudentCardProps) {
         ) : undefined
       }
     >
-      <InfoRow label={t("students.email")} value={student.email} icon={<Mail className="size-3.5" />} ltr />
+      {student.email ? (
+        <InfoRow label={t("students.email")} value={student.email} icon={<Mail className="size-3.5" />} ltr />
+      ) : null}
       <InfoRow label={t("students.registration")} value={student.registrationNo} icon={<Hash className="size-3.5" />} ltr />
       <InfoRow label={t("students.semester")} value={student.semester} icon={<Calendar className="size-3.5" />} />
       <InfoRow label={t("students.year")} value={student.enrollmentYear} icon={<GraduationCap className="size-3.5" />} ltr />

@@ -12,7 +12,7 @@ import { AuthProfileResponseDto, AuthSessionResponseDto, LoginCallbackResponseDt
 import { AuthErrors } from './authentication.errors';
 import { AuthMapper } from './authentication.mapper';
 import { StudentRepository } from '@/modules/student/student.repository';
-import { resolveStudentAuthEmail } from '@/shared/utils/student-auth.util';
+import { buildStudentAuthEmail } from '@/shared/utils/student-auth.util';
 import { UserRole } from '@/shared/types/enums';
 
 @Injectable()
@@ -65,7 +65,7 @@ export class AuthenticationService {
       throw DomainException.unauthorized('Invalid registration number or password', AuthErrors.INVALID_CREDENTIALS);
     }
 
-    const authEmail = resolveStudentAuthEmail(student.registrationNo, student.person.email);
+    const authEmail = buildStudentAuthEmail(student.registrationNo);
     const session = await this.supabase.signInWithPassword(authEmail, dto.password);
     if (!session) {
       throw DomainException.unauthorized('Invalid registration number or password', AuthErrors.INVALID_CREDENTIALS);

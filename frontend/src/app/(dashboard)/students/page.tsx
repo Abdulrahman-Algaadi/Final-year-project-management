@@ -29,7 +29,6 @@ const PAGE_SIZE = 20;
 interface StudentFormState {
   firstName: string;
   lastName: string;
-  email: string;
   registrationNo: string;
   password: string;
   departmentId: string;
@@ -40,7 +39,6 @@ interface StudentFormState {
 const emptyForm = (): StudentFormState => ({
   firstName: "",
   lastName: "",
-  email: "",
   registrationNo: "",
   password: "",
   departmentId: "",
@@ -130,7 +128,6 @@ export default function StudentsPage() {
     setForm({
       firstName: student.firstName,
       lastName: student.lastName,
-      email: student.email,
       registrationNo: student.registrationNo,
       password: "",
       departmentId: student.departmentId ? String(student.departmentId) : "",
@@ -155,7 +152,6 @@ export default function StudentsPage() {
           id: editing.id,
           firstName: form.firstName || undefined,
           lastName: form.lastName || undefined,
-          email: form.email || undefined,
           departmentId,
           semesterId,
           enrollmentYear,
@@ -192,7 +188,6 @@ export default function StudentsPage() {
         password: form.password,
         firstName: form.firstName || undefined,
         lastName: form.lastName || undefined,
-        email: form.email || undefined,
       });
       toast.success(t("students.created"));
       setDialogOpen(false);
@@ -283,16 +278,6 @@ export default function StudentsPage() {
                   className="mt-1.5"
                 />
               </div>
-            </div>
-            <div>
-              <label className="text-sm font-medium">{t("students.email")}</label>
-              <Input
-                type="email"
-                value={form.email}
-                onChange={(e) => setForm({ ...form, email: e.target.value })}
-                className="mt-1.5"
-                placeholder="student@university.edu"
-              />
             </div>
             <div>
               <label className="text-sm font-medium">
