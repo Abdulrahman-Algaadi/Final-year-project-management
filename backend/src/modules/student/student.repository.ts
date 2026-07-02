@@ -22,7 +22,10 @@ export class StudentRepository extends BaseRepository<Student> {
   }
 
   async findByRegistrationNo(registrationNo: string): Promise<Student | null> {
-    return this.repository.findOne({ where: { registrationNo } });
+    return this.repository.findOne({
+      where: { registrationNo: registrationNo.trim() },
+      relations: ['person'],
+    });
   }
 
   async findByPersonId(personId: number): Promise<Student | null> {

@@ -13,6 +13,7 @@ import { StudentRepository, StudentPersonRepository } from './student.repository
 import { StudentMapper } from './student.mapper';
 import { StudentPolicy } from './student.policy';
 import { StudentErrors } from './student.errors';
+import { StudentAccountService } from './student-account.service';
 
 @Injectable()
 export class StudentService {
@@ -23,6 +24,7 @@ export class StudentService {
     private readonly policy: StudentPolicy,
     private readonly dataSource: DataSource,
     private readonly advisorRepository: AdvisorRepository,
+    private readonly studentAccountService: StudentAccountService,
   ) {}
 
   async findAll(options: QueryOptions): Promise<{ items: StudentResponseDto[]; meta: PaginationMeta }> {
@@ -101,7 +103,7 @@ export class StudentService {
     }
     await this.assertUniqueEmail(dto.email);
 
-    return this.dataSource.transaction(async (manager) => {
+    const response = await this.dataSource.transaction(async (manager) => {
       const person = manager.create(Person, {
         firstName: dto.firstName?.trim(),
         lastName: dto.lastName?.trim(),
@@ -125,6 +127,17 @@ export class StudentService {
       savedStudent.person = savedPerson;
       return this.mapper.toResponse(savedStudent, savedPerson);
     });
+
+    await this.studentAccountService.provisionLogin(
+      response.id,
+      dto.registrationNo.trim(),
+      dto.password,
+      dto.email,
+      dto.firstName,
+      dto.lastName,
+    );
+
+    return response;
   }
 
   async update(id: number, dto: UpdateStudentDto): Promise<StudentResponseDto> {
@@ -153,6 +166,11 @@ export class StudentService {
 
     await this.personRepository.save(entity.person);
     const saved = await this.repository.save(entity);
+
+    if (dto.password) {
+      await this.studentAccountService.updatePassword(entity.id, dto.password);
+    }
+
     return this.mapper.toResponse(saved, entity.person);
   }
 

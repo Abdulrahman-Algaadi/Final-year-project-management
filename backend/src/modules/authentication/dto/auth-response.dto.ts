@@ -47,3 +47,17 @@ export class LoginCallbackResponseDto {
   @ApiProperty()
   message!: string;
 }
+
+export class StudentLoginResponseDto {
+  @ApiProperty()
+  accessToken!: string;
+
+  @ApiProperty()
+  refreshToken!: string;
+
+  @ApiProperty()
+  profile!: AuthProfileResponseDto;
+
+  @ApiProperty()
+  message!: string;
+}

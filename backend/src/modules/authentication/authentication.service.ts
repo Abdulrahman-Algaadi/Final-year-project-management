@@ -7,10 +7,13 @@ import { DomainException } from '@/shared/exceptions/domain.exception';
 import { SupabaseService } from '@/shared/services/supabase.service';
 import { AuthenticatedUser } from '@/shared/types/common.types';
 import { AuditActionType } from '@/shared/types/enums';
-import { LoginCallbackDto, SyncProfileDto } from './dto/auth.dto';
-import { AuthProfileResponseDto, AuthSessionResponseDto, LoginCallbackResponseDto } from './dto/auth-response.dto';
+import { LoginCallbackDto, StudentLoginDto, SyncProfileDto } from './dto/auth.dto';
+import { AuthProfileResponseDto, AuthSessionResponseDto, LoginCallbackResponseDto, StudentLoginResponseDto } from './dto/auth-response.dto';
 import { AuthErrors } from './authentication.errors';
 import { AuthMapper } from './authentication.mapper';
+import { StudentRepository } from '@/modules/student/student.repository';
+import { resolveStudentAuthEmail } from '@/shared/utils/student-auth.util';
+import { UserRole } from '@/shared/types/enums';
 
 @Injectable()
 export class AuthenticationService {
@@ -21,6 +24,7 @@ export class AuthenticationService {
     private readonly personRepo: Repository<Person>,
     private readonly supabase: SupabaseService,
     private readonly mapper: AuthMapper,
+    private readonly studentRepository: StudentRepository,
   ) {}
 
   async handleLoginCallback(dto: LoginCallbackDto): Promise<LoginCallbackResponseDto> {
@@ -50,6 +54,47 @@ export class AuthenticationService {
     await this.userAccountRepo.save(userAccount);
 
     return {
+      profile: this.mapper.toProfileResponse(userAccount, userAccount.person),
+      message: 'Login successful',
+    };
+  }
+
+  async loginWithRegistrationNo(dto: StudentLoginDto): Promise<StudentLoginResponseDto> {
+    const student = await this.studentRepository.findByRegistrationNo(dto.registrationNo);
+    if (!student?.person) {
+      throw DomainException.unauthorized('Invalid registration number or password', AuthErrors.INVALID_CREDENTIALS);
+    }
+
+    const authEmail = resolveStudentAuthEmail(student.registrationNo, student.person.email);
+    const session = await this.supabase.signInWithPassword(authEmail, dto.password);
+    if (!session) {
+      throw DomainException.unauthorized('Invalid registration number or password', AuthErrors.INVALID_CREDENTIALS);
+    }
+
+    const supabaseUser = await this.supabase.verifyJwt(session.accessToken);
+    if (!supabaseUser) {
+      throw DomainException.unauthorized('Invalid registration number or password', AuthErrors.INVALID_CREDENTIALS);
+    }
+
+    let userAccount = await this.userAccountRepo.findOne({
+      where: { authUserId: supabaseUser.id },
+      relations: ['person'],
+    });
+
+    if (!userAccount) {
+      throw DomainException.unauthorized('Student account is not linked', AuthErrors.INVALID_CREDENTIALS);
+    }
+
+    if (userAccount.role !== UserRole.Student) {
+      throw DomainException.forbidden('This login is for students only', AuthErrors.ACCESS_DENIED);
+    }
+
+    userAccount.lastLogin = new Date();
+    await this.userAccountRepo.save(userAccount);
+
+    return {
+      accessToken: session.accessToken,
+      refreshToken: session.refreshToken,
       profile: this.mapper.toProfileResponse(userAccount, userAccount.person),
       message: 'Login successful',
     };

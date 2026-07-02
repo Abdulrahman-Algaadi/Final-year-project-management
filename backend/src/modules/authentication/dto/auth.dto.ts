@@ -30,6 +30,18 @@ export class SyncProfileDto {
   email?: string;
 }
 
+export class StudentLoginDto {
+  @ApiProperty({ example: 'FYP-2025-001' })
+  @IsString()
+  @IsNotEmpty()
+  registrationNo!: string;
+
+  @ApiProperty()
+  @IsString()
+  @MinLength(8)
+  password!: string;
+}
+
 export class RegisterUserDto {
   @ApiProperty()
   @IsEmail()

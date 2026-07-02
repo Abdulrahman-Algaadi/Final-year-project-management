@@ -10,7 +10,9 @@ export function mapStudent(dto: StudentDto, ref?: ReferenceData): Student {
     lastName: dto.lastName ?? "",
     email: dto.email ?? "",
     department: dept?.name ?? "—",
+    departmentId: dto.departmentId,
     semester: ref?.semesters.get(dto.semesterId) ?? "—",
+    semesterId: dto.semesterId,
     enrollmentYear: dto.enrollmentYear,
     status: "Active",
   };

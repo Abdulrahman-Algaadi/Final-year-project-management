@@ -231,6 +231,34 @@ export interface AuditLogDto {
   actionDate: string;
 }
 
+export interface StudentLoginResponseDto {
+  accessToken: string;
+  refreshToken: string;
+  profile: AuthProfileDto;
+  message: string;
+}
+
+export interface CreateStudentPayload {
+  registrationNo: string;
+  departmentId: number;
+  semesterId: number;
+  enrollmentYear: number;
+  password: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+}
+
+export interface UpdateStudentPayload {
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  departmentId?: number;
+  semesterId?: number;
+  enrollmentYear?: number;
+  password?: string;
+}
+
 export interface ReferenceData {
   departments: Map<number, { name: string; code: string }>;
   semesters: Map<number, string>;

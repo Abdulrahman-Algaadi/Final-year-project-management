@@ -1,8 +1,9 @@
 import { apiClient } from "@/lib/api/client";
+import { setCachedAccessToken } from "@/lib/api/auth-token";
 import { mapAuthProfile } from "@/lib/api/mappers/auth.mapper";
-import { createClient } from "@/lib/supabase/client";
+import { createClientAsync } from "@/lib/supabase/client";
 import type { UserProfile } from "@/types";
-import type { AuthProfileDto, LoginCallbackDto } from "@/types/api";
+import type { AuthProfileDto, LoginCallbackDto, StudentLoginResponseDto } from "@/types/api";
 
 export async function loginCallback(accessToken: string): Promise<UserProfile> {
   const data = await apiClient<LoginCallbackDto>("/auth/callback", {
@@ -11,6 +12,30 @@ export async function loginCallback(accessToken: string): Promise<UserProfile> {
     token: accessToken,
     skipAuth: false,
   });
+  return mapAuthProfile(data.profile);
+}
+
+export async function loginStudent(registrationNo: string, password: string): Promise<UserProfile> {
+  const data = await apiClient<StudentLoginResponseDto>("/auth/login/student", {
+    method: "POST",
+    body: JSON.stringify({ registrationNo, password }),
+    skipAuth: true,
+  });
+
+  const supabase = await createClientAsync();
+  if (!supabase) {
+    throw new Error("Supabase is not configured.");
+  }
+
+  const { error } = await supabase.auth.setSession({
+    access_token: data.accessToken,
+    refresh_token: data.refreshToken,
+  });
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  setCachedAccessToken(data.accessToken);
   return mapAuthProfile(data.profile);
 }
 
@@ -32,7 +57,7 @@ export async function updateProfile(input: {
 }
 
 export async function changePassword(newPassword: string): Promise<void> {
-  const supabase = createClient();
+  const supabase = await createClientAsync();
   if (!supabase) throw new Error("Supabase is not configured.");
   const { error } = await supabase.auth.updateUser({ password: newPassword });
   if (error) {

@@ -43,7 +43,9 @@ export interface Student {
   lastName: string;
   email: string;
   department: string;
+  departmentId?: number;
   semester: string;
+  semesterId?: number;
   enrollmentYear: number;
   status: string;
 }

@@ -1,9 +1,11 @@
 "use client";
 
-import { GraduationCap, Mail, Hash, Building2, Calendar } from "lucide-react";
+import { GraduationCap, Mail, Hash, Building2, Calendar, Pencil } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { EntityCard } from "@/components/cards/entity-card";
+import { CardActions } from "@/components/cards/card-actions";
 import { InfoRow } from "@/components/cards/info-row";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { useTranslation } from "@/providers/locale-provider";
@@ -15,9 +17,11 @@ function initials(first: string, last: string) {
 
 interface StudentCardProps {
   student: Student;
+  canManage?: boolean;
+  onEdit?: () => void;
 }
 
-export function StudentCard({ student }: StudentCardProps) {
+export function StudentCard({ student, canManage, onEdit }: StudentCardProps) {
   const { t } = useTranslation();
 
   return (
@@ -42,6 +46,16 @@ export function StudentCard({ student }: StudentCardProps) {
             </div>
           </div>
         </div>
+      }
+      footer={
+        canManage ? (
+          <CardActions>
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={onEdit}>
+              <Pencil className="size-3.5 shrink-0" />
+              {t("common.edit")}
+            </Button>
+          </CardActions>
+        ) : undefined
       }
     >
       <InfoRow label={t("students.email")} value={student.email} icon={<Mail className="size-3.5" />} ltr />

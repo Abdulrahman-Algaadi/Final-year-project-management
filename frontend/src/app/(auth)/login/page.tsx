@@ -4,27 +4,36 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
-import { Mail, Lock, ArrowRight } from "lucide-react";
+import { Mail, Lock, ArrowRight, Hash } from "lucide-react";
 import { AppLogo } from "@/components/shared/app-logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LanguageSwitcher } from "@/components/shared/language-switcher";
 import { hasSupabaseConfig, getMissingPublicEnvVars } from "@/lib/env";
 import { setCachedAccessToken } from "@/lib/api/auth-token";
-import { createClient, createClientAsync } from "@/lib/supabase/client";
-import { loginCallback } from "@/lib/api/services/auth.service";
+import { createClientAsync } from "@/lib/supabase/client";
+import { loginCallback, loginStudent } from "@/lib/api/services/auth.service";
 import { useSession } from "@/providers/session-provider";
 import { useTranslation } from "@/providers/locale-provider";
 import { toast } from "sonner";
+
+type LoginMode = "staff" | "student";
 
 export default function LoginPage() {
   const searchParams = useSearchParams();
   const { t } = useTranslation();
   const { user, loading: sessionLoading, setUser } = useSession();
+  const [mode, setMode] = useState<LoginMode>("staff");
   const [email, setEmail] = useState("");
+  const [registrationNo, setRegistrationNo] = useState("");
   const [password, setPassword] = useState("");
-  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const [errors, setErrors] = useState<{
+    email?: string;
+    registrationNo?: string;
+    password?: string;
+  }>({});
   const [loading, setLoading] = useState(false);
   const supabaseConfigured = hasSupabaseConfig();
   const missingEnvVars = getMissingPublicEnvVars();
@@ -43,15 +52,20 @@ export default function LoginPage() {
 
   const validate = () => {
     const next: typeof errors = {};
-    if (!email) next.email = `${t("login.email")} required`;
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) next.email = "Invalid email";
+    if (mode === "staff") {
+      if (!email) next.email = `${t("login.email")} required`;
+      else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) next.email = "Invalid email";
+    } else {
+      if (!registrationNo.trim()) next.registrationNo = `${t("login.registrationNo")} required`;
+    }
     if (!password) next.password = `${t("login.password")} required`;
-    else if (password.length < 6) next.password = "Min 6 characters";
+    else if (mode === "student" && password.length < 8) next.password = "Min 8 characters";
+    else if (mode === "staff" && password.length < 6) next.password = "Min 6 characters";
     setErrors(next);
     return Object.keys(next).length === 0;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleStaffSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validate()) return;
     setLoading(true);
@@ -65,7 +79,22 @@ export default function LoginPage() {
       const profile = await loginCallback(data.session.access_token);
       setUser(profile);
       toast.success(t("dashboard.welcome"));
-      // Full navigation so middleware reads Supabase auth cookies (router.replace races cookie write).
+      window.location.assign("/dashboard");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Login failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleStudentSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validate()) return;
+    setLoading(true);
+    try {
+      const profile = await loginStudent(registrationNo.trim(), password);
+      setUser(profile);
+      toast.success(t("dashboard.welcome"));
       window.location.assign("/dashboard");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Login failed");
@@ -97,7 +126,9 @@ export default function LoginPage() {
         <Card>
           <CardHeader>
             <CardTitle>{t("login.cardTitle")}</CardTitle>
-            <CardDescription>{t("login.cardDesc")}</CardDescription>
+            <CardDescription>
+              {mode === "student" ? t("login.studentHint") : t("login.cardDesc")}
+            </CardDescription>
           </CardHeader>
           <CardContent>
             {!supabaseConfigured && (
@@ -117,26 +148,110 @@ export default function LoginPage() {
                 </ul>
               </div>
             )}
-            <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-              <div className="space-y-2">
-                <label htmlFor="email" className="text-sm font-medium">{t("login.email")} *</label>
-                <div className="relative">
-                  <Mail className="absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input id="email" type="email" autoFocus autoComplete="email" placeholder="you@university.edu" className="ps-9" value={email} onChange={(e) => setEmail(e.target.value)} error={errors.email} />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <label htmlFor="password" className="text-sm font-medium">{t("login.password")} *</label>
-                <div className="relative">
-                  <Lock className="absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input id="password" type="password" autoComplete="current-password" placeholder="••••••••" className="ps-9" value={password} onChange={(e) => setPassword(e.target.value)} error={errors.password} />
-                </div>
-              </div>
-              <Button type="submit" className="w-full gap-2" loading={loading} disabled={!supabaseConfigured}>
-                {t("common.signIn")}
-                <ArrowRight className="size-4 rtl-flip" />
-              </Button>
-            </form>
+
+            <Tabs
+              value={mode}
+              onValueChange={(value) => {
+                setMode(value as LoginMode);
+                setErrors({});
+              }}
+            >
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="staff">{t("login.staffTab")}</TabsTrigger>
+                <TabsTrigger value="student">{t("login.studentTab")}</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="staff">
+                <form onSubmit={handleStaffSubmit} className="space-y-4" noValidate>
+                  <div className="space-y-2">
+                    <label htmlFor="email" className="text-sm font-medium">
+                      {t("login.email")} *
+                    </label>
+                    <div className="relative">
+                      <Mail className="absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        id="email"
+                        type="email"
+                        autoFocus
+                        autoComplete="email"
+                        placeholder="you@university.edu"
+                        className="ps-9"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        error={errors.email}
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label htmlFor="staff-password" className="text-sm font-medium">
+                      {t("login.password")} *
+                    </label>
+                    <div className="relative">
+                      <Lock className="absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        id="staff-password"
+                        type="password"
+                        autoComplete="current-password"
+                        placeholder="••••••••"
+                        className="ps-9"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        error={errors.password}
+                      />
+                    </div>
+                  </div>
+                  <Button type="submit" className="w-full gap-2" loading={loading} disabled={!supabaseConfigured}>
+                    {t("common.signIn")}
+                    <ArrowRight className="size-4 rtl-flip" />
+                  </Button>
+                </form>
+              </TabsContent>
+
+              <TabsContent value="student">
+                <form onSubmit={handleStudentSubmit} className="space-y-4" noValidate>
+                  <div className="space-y-2">
+                    <label htmlFor="registrationNo" className="text-sm font-medium">
+                      {t("login.registrationNo")} *
+                    </label>
+                    <div className="relative">
+                      <Hash className="absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        id="registrationNo"
+                        type="text"
+                        autoComplete="username"
+                        placeholder="FYP-2025-001"
+                        className="ps-9"
+                        value={registrationNo}
+                        onChange={(e) => setRegistrationNo(e.target.value)}
+                        error={errors.registrationNo}
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label htmlFor="student-password" className="text-sm font-medium">
+                      {t("login.password")} *
+                    </label>
+                    <div className="relative">
+                      <Lock className="absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        id="student-password"
+                        type="password"
+                        autoComplete="current-password"
+                        placeholder="••••••••"
+                        className="ps-9"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        error={errors.password}
+                      />
+                    </div>
+                  </div>
+                  <Button type="submit" className="w-full gap-2" loading={loading} disabled={!supabaseConfigured}>
+                    {t("common.signIn")}
+                    <ArrowRight className="size-4 rtl-flip" />
+                  </Button>
+                </form>
+              </TabsContent>
+            </Tabs>
           </CardContent>
         </Card>
 

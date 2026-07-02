@@ -4,8 +4,8 @@ import { Public } from '@/shared/decorators/auth.decorators';
 import { CurrentUser } from '@/shared/decorators/current-user.decorator';
 import { AuthenticatedUser } from '@/shared/types/common.types';
 import { AuthenticationService } from './authentication.service';
-import { LoginCallbackDto, SyncProfileDto } from './dto/auth.dto';
-import { AuthProfileResponseDto, AuthSessionResponseDto, LoginCallbackResponseDto } from './dto/auth-response.dto';
+import { LoginCallbackDto, StudentLoginDto, SyncProfileDto } from './dto/auth.dto';
+import { AuthProfileResponseDto, AuthSessionResponseDto, LoginCallbackResponseDto, StudentLoginResponseDto } from './dto/auth-response.dto';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -17,6 +17,13 @@ export class AuthenticationController {
   @ApiOperation({ summary: 'Supabase login callback – sync session and profile' })
   handleCallback(@Body() dto: LoginCallbackDto): Promise<LoginCallbackResponseDto> {
     return this.authService.handleLoginCallback(dto);
+  }
+
+  @Public()
+  @Post('login/student')
+  @ApiOperation({ summary: 'Student login with registration number and password' })
+  loginStudent(@Body() dto: StudentLoginDto): Promise<StudentLoginResponseDto> {
+    return this.authService.loginWithRegistrationNo(dto);
   }
 
   @Get('profile')

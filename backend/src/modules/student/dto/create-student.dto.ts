@@ -9,6 +9,7 @@ import {
   Max,
   MaxLength,
   Min,
+  MinLength,
 } from 'class-validator';
 
 export class CreateStudentDto {
@@ -70,4 +71,9 @@ export class CreateStudentDto {
   @Min(1990)
   @Max(new Date().getFullYear() + 1)
   enrollmentYear!: number;
+
+  @ApiProperty({ minLength: 8, description: 'Login password for registration-number sign-in' })
+  @IsString()
+  @MinLength(8)
+  password!: string;
 }

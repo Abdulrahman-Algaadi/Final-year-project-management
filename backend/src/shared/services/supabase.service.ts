@@ -100,4 +100,56 @@ export class SupabaseService {
     }
     return { path, size: file.length };
   }
+
+  async signInWithPassword(
+    email: string,
+    password: string,
+  ): Promise<{ accessToken: string; refreshToken: string } | null> {
+    const { data, error } = await this.client.auth.signInWithPassword({ email, password });
+    if (error || !data.session?.access_token) {
+      return null;
+    }
+    return {
+      accessToken: data.session.access_token,
+      refreshToken: data.session.refresh_token ?? '',
+    };
+  }
+
+  async ensureAuthUser(email: string, password: string): Promise<string> {
+    const admin = this.adminClient.auth.admin;
+    const normalized = email.trim().toLowerCase();
+    const { data: listed, error: listError } = await admin.listUsers();
+    if (listError) {
+      throw new Error(`Failed to list auth users: ${listError.message}`);
+    }
+
+    const existing = listed.users.find((u) => u.email?.toLowerCase() === normalized);
+    if (existing) {
+      const { error } = await admin.updateUserById(existing.id, {
+        password,
+        email_confirm: true,
+      });
+      if (error) {
+        throw new Error(`Failed to update auth user: ${error.message}`);
+      }
+      return existing.id;
+    }
+
+    const { data, error } = await admin.createUser({
+      email: normalized,
+      password,
+      email_confirm: true,
+    });
+    if (error || !data.user) {
+      throw new Error(`Failed to create auth user: ${error?.message ?? 'unknown'}`);
+    }
+    return data.user.id;
+  }
+
+  async updateAuthUserPassword(authUserId: string, password: string): Promise<void> {
+    const { error } = await this.adminClient.auth.admin.updateUserById(authUserId, { password });
+    if (error) {
+      throw new Error(`Failed to update password: ${error.message}`);
+    }
+  }
 }
