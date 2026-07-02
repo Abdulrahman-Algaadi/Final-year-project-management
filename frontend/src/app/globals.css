@@ -279,6 +279,139 @@ body {
   color: hsl(var(--error-text)) !important;
 }
 
+/* Landing page — navy theme, glassmorphism, motion */
+.landing-page {
+  --landing-navy: 222 47% 7%;
+  --landing-navy-light: 222 35% 12%;
+  --landing-blue: 217 91% 60%;
+  --landing-blue-dark: 217 71% 45%;
+  --landing-purple: 262 70% 58%;
+  --landing-teal: 168 76% 42%;
+  --landing-gold: 38 92% 50%;
+  background: hsl(var(--landing-navy));
+  color: #fff;
+}
+
+.landing-glass {
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.landing-glass-strong {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.landing-hero-bg {
+  background:
+    radial-gradient(ellipse 80% 60% at 70% 20%, hsl(var(--landing-blue) / 0.18) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 50% at 20% 80%, hsl(var(--landing-purple) / 0.12) 0%, transparent 55%),
+    linear-gradient(180deg, hsl(var(--landing-navy)) 0%, hsl(222 47% 5%) 100%);
+}
+
+.landing-glow-blue {
+  background: radial-gradient(circle, hsl(var(--landing-blue) / 0.35) 0%, transparent 70%);
+}
+
+.landing-glow-purple {
+  background: radial-gradient(circle, hsl(var(--landing-purple) / 0.25) 0%, transparent 70%);
+}
+
+@keyframes landing-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-12px);
+  }
+}
+
+@keyframes landing-float-slow {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-8px) rotate(2deg);
+  }
+}
+
+@keyframes landing-bounce-scroll {
+  0%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.7;
+  }
+  50% {
+    transform: translateY(6px);
+    opacity: 1;
+  }
+}
+
+@keyframes landing-pulse-ring {
+  0% {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  100% {
+    transform: scale(1.4);
+    opacity: 0;
+  }
+}
+
+.landing-float {
+  animation: landing-float 4s ease-in-out infinite;
+}
+
+.landing-float-slow {
+  animation: landing-float-slow 5s ease-in-out infinite;
+}
+
+.landing-float-delay-1 {
+  animation-delay: 0.5s;
+}
+
+.landing-float-delay-2 {
+  animation-delay: 1s;
+}
+
+.landing-float-delay-3 {
+  animation-delay: 1.5s;
+}
+
+.landing-scroll-bounce {
+  animation: landing-bounce-scroll 2s ease-in-out infinite;
+}
+
+.landing-nav-link {
+  position: relative;
+  transition: color 0.2s ease;
+}
+
+.landing-nav-link::after {
+  content: "";
+  position: absolute;
+  bottom: -4px;
+  inset-inline: 0;
+  height: 2px;
+  background: hsl(var(--landing-blue));
+  transform: scaleX(0);
+  transition: transform 0.2s ease;
+}
+
+.landing-nav-link:hover {
+  color: #fff;
+}
+
+.landing-nav-link:hover::after {
+  transform: scaleX(1);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
