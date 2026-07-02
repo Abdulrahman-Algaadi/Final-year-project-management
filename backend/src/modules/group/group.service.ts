@@ -360,17 +360,6 @@ export class GroupService {
 
     const advisorRoleId = await this.resolveAdvisorRoleId(dto.advisorRoleId);
 
-    const existingByRole = await this.groupProjectAdvisorRepository.findByProjectAndRole(
-      projectId,
-      advisorRoleId,
-    );
-    if (existingByRole) {
-      throw DomainException.businessRule(
-        'This advisor role is already filled for the project',
-        GroupErrors.ADVISOR_ROLE_TAKEN,
-      );
-    }
-
     const assignment = this.groupProjectAdvisorRepository.create({
       projectId,
       advisorId: dto.advisorId,

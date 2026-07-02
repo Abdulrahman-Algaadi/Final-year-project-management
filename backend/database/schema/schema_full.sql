@@ -214,7 +214,6 @@ CREATE TABLE project_advisor (
     advisor_role_id     INT NOT NULL REFERENCES lookup (id) ON DELETE RESTRICT,
     assignment_date     DATE NOT NULL DEFAULT CURRENT_DATE,
 
-    CONSTRAINT uq_project_advisor_project_role UNIQUE (project_id, advisor_role_id),
     CONSTRAINT uq_project_advisor_advisor_project UNIQUE (advisor_id, project_id),
     CONSTRAINT chk_project_advisor_assignment_date
         CHECK (assignment_date <= CURRENT_DATE)

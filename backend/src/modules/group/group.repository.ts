@@ -119,10 +119,6 @@ export class GroupProjectAdvisorRepository {
     return this.repository.findOne({ where: { projectId, advisorId } });
   }
 
-  async findByProjectAndRole(projectId: number, advisorRoleId: number): Promise<ProjectAdvisor | null> {
-    return this.repository.findOne({ where: { projectId, advisorRoleId } });
-  }
-
   create(data: Partial<ProjectAdvisor>): ProjectAdvisor {
     return this.repository.create(data);
   }

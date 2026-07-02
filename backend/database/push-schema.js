@@ -13,6 +13,7 @@ const CONNECTION_URLS = [process.env.MIGRATE_DATABASE_URL].filter(Boolean);
 const FILES = [
   "schema_full.sql",
   "06_auth_soft_delete_enhancements.sql",
+  "07_allow_multiple_project_advisors.sql",
 ];
 
 async function runFile(client, filename) {
