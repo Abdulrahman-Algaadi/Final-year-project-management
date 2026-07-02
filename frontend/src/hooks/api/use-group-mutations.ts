@@ -26,7 +26,7 @@ export function useGroupMutations() {
     }: {
       groupId: number;
       studentId: number;
-      statusId: number;
+      statusId?: number;
       isLeader?: boolean;
     }) => addGroupMember(groupId, { studentId, statusId, isLeader }),
     onSuccess: invalidate,

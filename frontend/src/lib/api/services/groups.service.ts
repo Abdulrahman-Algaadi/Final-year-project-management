@@ -50,7 +50,7 @@ export async function deleteGroup(id: number): Promise<void> {
 
 export async function addGroupMember(
   groupId: number,
-  input: { studentId: number; statusId: number; isLeader?: boolean },
+  input: { studentId: number; statusId?: number; isLeader?: boolean },
 ): Promise<GroupDto> {
   return apiClient<GroupDto>(`/groups/${groupId}/members`, {
     method: "POST",

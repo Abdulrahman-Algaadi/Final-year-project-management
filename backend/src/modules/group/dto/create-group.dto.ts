@@ -14,9 +14,10 @@ export class AddGroupMemberDto {
   @IsInt()
   studentId!: number;
 
-  @ApiProperty()
+  @ApiPropertyOptional({ description: 'Defaults to StudentStatus Active when omitted' })
+  @IsOptional()
   @IsInt()
-  statusId!: number;
+  statusId?: number;
 
   @ApiPropertyOptional({ default: false })
   @IsOptional()

@@ -14,7 +14,6 @@ import { fetchProjectsPaginated } from "@/lib/api/services/projects.service";
 import { fetchStudentsPaginated } from "@/lib/api/services/students.service";
 import { fetchReferenceData } from "@/lib/api/services/reference.service";
 import { formatPersonName } from "@/lib/api/mappers/student.mapper";
-import { ACTIVE_STUDENT_STATUS_ID } from "@/lib/api/constants";
 import { useAppData } from "@/providers/app-data-provider";
 import { useSession } from "@/providers/session-provider";
 import { useTranslation } from "@/providers/locale-provider";
@@ -44,7 +43,7 @@ function buildDemoGroupDto(
       id: m.id,
       studentId: m.studentId,
       isLeader: m.isLeader,
-      statusId: ACTIVE_STUDENT_STATUS_ID,
+      statusId: 10,
       assignmentDate: group.createdOn,
     })),
     project: projectId
@@ -222,7 +221,6 @@ export function GroupDetailDialog({ group, open, onOpenChange, canManage }: Grou
       const dto = await addMember.mutateAsync({
         groupId: group.id,
         studentId: Number(studentId),
-        statusId: ACTIVE_STUDENT_STATUS_ID,
       });
       setDetail(dto);
       setStudentId("");

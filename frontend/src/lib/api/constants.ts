@@ -9,6 +9,4 @@ export const PROJECT_STATUS_IDS: Record<string, number> = {
 
 export const DEFAULT_SEMESTER_ID = 1;
 
-export const ACTIVE_STUDENT_STATUS_ID = 1;
-
 export const PAGE_SIZE = 20;

@@ -11,8 +11,9 @@ import { GroupPolicy } from './group.policy';
 import { GroupErrors } from './group.errors';
 import { StudentRepository } from '@/modules/student/student.repository';
 import { AdvisorRepository } from '@/modules/advisor/advisor.repository';
-import { UserRole } from '@/shared/types/enums';
+import { UserRole, LookupCategory } from '@/shared/types/enums';
 import { buildPaginationMeta } from '@/shared/utils/query.util';
+import { LookupRepository } from '@/modules/lookup/lookup.repository';
 
 @Injectable()
 export class GroupService {
@@ -22,6 +23,7 @@ export class GroupService {
     private readonly groupProjectRepository: GroupProjectRepository,
     private readonly studentRepository: StudentRepository,
     private readonly advisorRepository: AdvisorRepository,
+    private readonly lookupRepository: LookupRepository,
     private readonly mapper: GroupMapper,
     private readonly policy: GroupPolicy,
   ) {}
@@ -230,15 +232,36 @@ export class GroupService {
       this.policy.assertLeaderUnique(existingLeader, true);
     }
 
+    const statusId = await this.resolveMemberStatusId(dto.statusId);
+
     const member = this.groupStudentRepository.create({
       groupId,
       studentId: dto.studentId,
-      statusId: dto.statusId,
+      statusId,
       isLeader: dto.isLeader ?? false,
       assignmentDate: new Date().toISOString().slice(0, 10),
     });
     await this.groupStudentRepository.save(member);
     return this.findById(groupId);
+  }
+
+  private async resolveMemberStatusId(statusId?: number): Promise<number> {
+    if (statusId !== undefined) {
+      const lookup = await this.lookupRepository.findById(statusId);
+      if (!lookup || lookup.category !== LookupCategory.StudentStatus) {
+        throw DomainException.badRequest('Invalid student status', GroupErrors.INVALID_STATUS);
+      }
+      return statusId;
+    }
+
+    const active = await this.lookupRepository.findByCategoryAndValue(
+      LookupCategory.StudentStatus,
+      'Active',
+    );
+    if (!active) {
+      throw DomainException.notFound('StudentStatus Active lookup');
+    }
+    return active.id;
   }
 
   async removeMember(groupId: number, memberId: number): Promise<GroupResponseDto> {
