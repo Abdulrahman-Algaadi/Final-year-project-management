@@ -45,7 +45,11 @@ export class ReferenceService {
     const isStudent = user.role === UserRole.Student;
 
     const [departments, semesters, students, projects, evaluations, advisors] = await Promise.all([
-      privileged ? this.departmentService.findAll(LOAD_ALL).then((r) => r.items) : Promise.resolve([]),
+      privileged
+        ? this.departmentService.findAll(LOAD_ALL).then((r) => r.items)
+        : isAdvisor
+          ? this.loadDepartmentsForAdvisor(user)
+          : Promise.resolve([]),
       privileged ? this.semesterService.findAll(LOAD_ALL).then((r) => r.items) : Promise.resolve([]),
       privileged || isAdvisor
         ? this.studentService.findAllForUser(user, LOAD_ALL).then((r) => r.items)
@@ -90,6 +94,16 @@ export class ReferenceService {
         lastName: a.lastName ?? '',
       })),
     };
+  }
+
+  private async loadDepartmentsForAdvisor(user: AuthenticatedUser): Promise<{ id: number; name: string; code: string }[]> {
+    try {
+      const advisor = await this.advisorService.findById(user.personId);
+      const department = await this.departmentService.findById(advisor.departmentId);
+      return [{ id: department.id, name: department.name, code: department.code }];
+    } catch {
+      return [];
+    }
   }
 
   private async loadAdvisors(user: AuthenticatedUser): Promise<AdvisorResponseDto[]> {

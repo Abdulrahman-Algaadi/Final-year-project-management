@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { FolderKanban, Building2, Calendar, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EntityCard } from "@/components/cards/entity-card";
@@ -8,7 +9,10 @@ import { InfoRow } from "@/components/cards/info-row";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { useTranslation } from "@/providers/locale-provider";
 import { formatDate } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import type { Project } from "@/types";
+
+const DESCRIPTION_PREVIEW_CHARS = 160;
 
 interface ProjectCardProps {
   project: Project;
@@ -19,6 +23,9 @@ interface ProjectCardProps {
 
 export function ProjectCard({ project, canManage, onEdit, onDelete }: ProjectCardProps) {
   const { t } = useTranslation();
+  const [descExpanded, setDescExpanded] = useState(false);
+  const description = project.description?.trim();
+  const descriptionIsLong = (description?.length ?? 0) > DESCRIPTION_PREVIEW_CHARS;
 
   return (
     <EntityCard
@@ -28,10 +35,31 @@ export function ProjectCard({ project, canManage, onEdit, onDelete }: ProjectCar
             <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
               <FolderKanban className="size-5" />
             </div>
-            <div className="min-w-0">
-              <h3 className="line-clamp-2 font-semibold leading-snug">{project.title}</h3>
-              {project.description && (
-                <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{project.description}</p>
+            <div className="min-w-0 flex-1">
+              <h3 className="font-semibold leading-snug break-words">{project.title}</h3>
+              {description && (
+                <div className="mt-1.5">
+                  <p
+                    className={cn(
+                      "text-sm leading-relaxed text-muted-foreground break-words whitespace-pre-wrap",
+                      !descExpanded && descriptionIsLong && "line-clamp-4",
+                    )}
+                  >
+                    {description}
+                  </p>
+                  {descriptionIsLong && (
+                    <button
+                      type="button"
+                      className="mt-1 text-xs font-medium text-primary hover:underline"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setDescExpanded((current) => !current);
+                      }}
+                    >
+                      {descExpanded ? t("common.showLess") : t("common.showMore")}
+                    </button>
+                  )}
+                </div>
               )}
             </div>
           </div>

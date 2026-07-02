@@ -6,11 +6,27 @@ import { ProjectResponseDto } from './dto/project-response.dto';
 export class ProjectMapper {
   private resolveDepartment(entity: Project): { departmentId?: number; departmentName?: string } {
     const members = entity.groupAssignment?.group?.members;
-    if (!members?.length) return {};
-    const leader = members.find((m) => m.isLeader) ?? members[0];
-    const department = leader?.student?.department;
-    if (!department) return {};
-    return { departmentId: department.id, departmentName: department.name };
+    if (members?.length) {
+      const leader = members.find((m) => m.isLeader) ?? members[0];
+      const department = leader?.student?.department;
+      if (department) {
+        return { departmentId: department.id, departmentName: department.name };
+      }
+      for (const member of members) {
+        const memberDepartment = member.student?.department;
+        if (memberDepartment) {
+          return { departmentId: memberDepartment.id, departmentName: memberDepartment.name };
+        }
+      }
+    }
+
+    const advisorAssignment = entity.advisors?.[0];
+    const advisorDepartment = advisorAssignment?.advisor?.department;
+    if (advisorDepartment) {
+      return { departmentId: advisorDepartment.id, departmentName: advisorDepartment.name };
+    }
+
+    return {};
   }
 
   toResponse(entity: Project): ProjectResponseDto {

@@ -25,7 +25,10 @@ export class ProjectRepository extends BaseRepository<Project> {
       .leftJoinAndSelect('groupAssignment.group', 'group')
       .leftJoinAndSelect('group.members', 'members')
       .leftJoinAndSelect('members.student', 'student')
-      .leftJoinAndSelect('student.department', 'department');
+      .leftJoinAndSelect('student.department', 'department')
+      .leftJoinAndSelect('project.advisors', 'projectAdvisors')
+      .leftJoinAndSelect('projectAdvisors.advisor', 'assignedAdvisor')
+      .leftJoinAndSelect('assignedAdvisor.department', 'assignedAdvisorDepartment');
 
     applySoftDeleteFilter(qb, 'project', options.includeDeleted);
 
@@ -52,6 +55,12 @@ export class ProjectRepository extends BaseRepository<Project> {
       .leftJoinAndSelect('project.semester', 'semester')
       .leftJoinAndSelect('project.groupAssignment', 'groupAssignment')
       .leftJoinAndSelect('groupAssignment.group', 'group')
+      .leftJoinAndSelect('group.members', 'members')
+      .leftJoinAndSelect('members.student', 'student')
+      .leftJoinAndSelect('student.department', 'department')
+      .leftJoinAndSelect('project.advisors', 'projectAdvisors')
+      .leftJoinAndSelect('projectAdvisors.advisor', 'assignedAdvisor')
+      .leftJoinAndSelect('assignedAdvisor.department', 'assignedAdvisorDepartment')
       .where('pa.advisor_id = :advisorId', { advisorId });
 
     applySoftDeleteFilter(qb, 'project', options.includeDeleted);
@@ -80,6 +89,8 @@ export class ProjectRepository extends BaseRepository<Project> {
         'groupAssignment.group.members.student',
         'groupAssignment.group.members.student.department',
         'advisors',
+        'advisors.advisor',
+        'advisors.advisor.department',
       ],
     });
   }

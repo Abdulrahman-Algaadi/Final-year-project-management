@@ -30,6 +30,8 @@
     "pageOf": "Page {page} of {totalPages}",
     "totalCount": "{count} total",
     "typeToSearch": "Type name or ID to search...",
+    "showMore": "Show more",
+    "showLess": "Show less",
     "loadMore": "Load more",
     "searching": "Searching..."
   },

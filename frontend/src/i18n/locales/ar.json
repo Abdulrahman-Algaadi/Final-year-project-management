@@ -30,6 +30,8 @@
     "pageOf": "صفحة {page} من {totalPages}",
     "totalCount": "{count} إجمالي",
     "typeToSearch": "اكتب الاسم أو الرقم للبحث...",
+    "showMore": "عرض المزيد",
+    "showLess": "عرض أقل",
     "loadMore": "تحميل المزيد",
     "searching": "جاري البحث..."
   },
