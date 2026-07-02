@@ -43,7 +43,7 @@ export class GroupService {
       ['groupName'],
       ['members', 'projectAssignment'],
     );
-    return { items: this.mapper.toResponseList(items), meta };
+    return { items: await this.mapGroupsWithAdvisors(items), meta };
   }
 
   async findAllForUser(
@@ -65,7 +65,7 @@ export class GroupService {
       const start = (page - 1) * limit;
       const slice = groups.slice(start, start + limit);
       return {
-        items: this.mapper.toResponseList(slice),
+        items: await this.mapGroupsWithAdvisors(slice),
         meta: buildPaginationMeta(groups.length, options),
       };
     }
@@ -144,7 +144,35 @@ export class GroupService {
       throw DomainException.notFound('Advisor', user.personId);
     }
     const groups = await this.repository.findByAdvisorId(advisor.id);
-    return this.mapper.toResponseList(groups);
+    return this.mapGroupsWithAdvisors(groups);
+  }
+
+  private async mapGroupsWithAdvisors(entities: StudentGroup[]): Promise<GroupResponseDto[]> {
+    const projectIds = [
+      ...new Set(
+        entities
+          .map((group) => group.projectAssignment?.projectId)
+          .filter((projectId): projectId is number => projectId != null),
+      ),
+    ];
+
+    const projectAdvisors =
+      projectIds.length > 0
+        ? await this.groupProjectAdvisorRepository.findByProjectIds(projectIds)
+        : [];
+
+    const advisorsByProject = new Map<number, ProjectAdvisor[]>();
+    for (const assignment of projectAdvisors) {
+      const existing = advisorsByProject.get(assignment.projectId) ?? [];
+      existing.push(assignment);
+      advisorsByProject.set(assignment.projectId, existing);
+    }
+
+    return entities.map((entity) => {
+      const projectId = entity.projectAssignment?.projectId;
+      const advisors = projectId ? advisorsByProject.get(projectId) : undefined;
+      return this.mapper.toResponse(entity, advisors);
+    });
   }
 
   private assertCanMutateGroup(user: AuthenticatedUser): void {

@@ -1,6 +1,6 @@
 "use client";
 
-import { Users, Crown, FolderKanban, Calendar, Settings2 } from "lucide-react";
+import { Users, Crown, FolderKanban, Calendar, Settings2, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CardActions } from "@/components/cards/card-actions";
 import { EntityCard } from "@/components/cards/entity-card";
@@ -34,6 +34,12 @@ export function GroupCard({ group, onManage, actionLabel }: GroupCardProps) {
                 <Crown className="size-3.5 shrink-0" />
                 {group.leaderName}
               </p>
+              {group.advisorNames && (
+                <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
+                  <UserRound className="size-3.5 shrink-0" />
+                  {group.advisorNames}
+                </p>
+              )}
             </div>
           </div>
           <StatusBadge status={group.status} />

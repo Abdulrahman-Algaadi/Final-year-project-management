@@ -67,6 +67,7 @@ export interface Group {
   groupName: string;
   memberCount: number;
   leaderName: string;
+  advisorNames?: string;
   projectTitle?: string;
   status: string;
   createdOn: string;

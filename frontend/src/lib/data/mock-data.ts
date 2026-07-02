@@ -27,9 +27,9 @@ export const MOCK_STUDENTS: Student[] = [
 ];
 
 export const MOCK_GROUPS: Group[] = [
-  { id: 1, groupName: "Team Alpha", memberCount: 4, leaderName: "Ahmed Khan", projectTitle: "AI-Powered Attendance System", status: "Active", createdOn: "2025-09-01" },
-  { id: 2, groupName: "Team Beta", memberCount: 3, leaderName: "Omar Hassan", projectTitle: "Smart Campus Navigation App", status: "Active", createdOn: "2025-09-05" },
-  { id: 3, groupName: "Team Gamma", memberCount: 4, leaderName: "Sara Malik", projectTitle: "IoT Energy Monitoring Platform", status: "Active", createdOn: "2025-09-10" },
+  { id: 1, groupName: "Team Alpha", memberCount: 4, leaderName: "Ahmed Khan", advisorNames: "Dr. Sarah Ahmed", projectTitle: "AI-Powered Attendance System", status: "Active", createdOn: "2025-09-01" },
+  { id: 2, groupName: "Team Beta", memberCount: 3, leaderName: "Omar Hassan", advisorNames: "Prof. James Wilson", projectTitle: "Smart Campus Navigation App", status: "Active", createdOn: "2025-09-05" },
+  { id: 3, groupName: "Team Gamma", memberCount: 4, leaderName: "Sara Malik", advisorNames: "Dr. Emily Chen", projectTitle: "IoT Energy Monitoring Platform", status: "Active", createdOn: "2025-09-10" },
   { id: 4, groupName: "Team Delta", memberCount: 2, leaderName: "Usman Raza", projectTitle: "Automated Library Management", status: "Active", createdOn: "2025-09-15" },
 ];
 

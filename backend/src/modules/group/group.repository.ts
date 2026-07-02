@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { StudentGroup } from '@/database/entities/student-group.entity';
 import { GroupStudent } from '@/database/entities/group-student.entity';
 import { GroupProject } from '@/database/entities/group-project.entity';
@@ -25,6 +25,8 @@ export class GroupRepository extends BaseRepository<StudentGroup> {
       .createQueryBuilder('student_group')
       .innerJoin('group_project', 'gp', 'gp.group_id = student_group.id')
       .innerJoin('project_advisor', 'pa', 'pa.project_id = gp.project_id')
+      .leftJoinAndSelect('student_group.members', 'members')
+      .leftJoinAndSelect('student_group.projectAssignment', 'projectAssignment')
       .where('pa.advisor_id = :advisorId', { advisorId })
       .andWhere('student_group.deleted_at IS NULL')
       .orderBy('student_group.group_name', 'ASC')
@@ -109,6 +111,16 @@ export class GroupProjectAdvisorRepository {
 
   async findByProjectId(projectId: number): Promise<ProjectAdvisor[]> {
     return this.repository.find({ where: { projectId }, order: { id: 'ASC' } });
+  }
+
+  async findByProjectIds(projectIds: number[]): Promise<ProjectAdvisor[]> {
+    if (projectIds.length === 0) {
+      return [];
+    }
+    return this.repository.find({
+      where: { projectId: In(projectIds) },
+      order: { projectId: 'ASC', id: 'ASC' },
+    });
   }
 
   async findById(id: number): Promise<ProjectAdvisor | null> {
