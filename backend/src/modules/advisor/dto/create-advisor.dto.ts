@@ -3,11 +3,13 @@ import {
   IsDateString,
   IsEmail,
   IsInt,
+  IsNotEmpty,
   IsNumber,
   IsOptional,
   IsString,
   MaxLength,
   Min,
+  MinLength,
 } from 'class-validator';
 
 export class CreateAdvisorDto {
@@ -23,10 +25,10 @@ export class CreateAdvisorDto {
   @MaxLength(100)
   lastName?: string;
 
-  @ApiPropertyOptional()
-  @IsOptional()
+  @ApiProperty()
   @IsEmail()
-  email?: string;
+  @IsNotEmpty()
+  email!: string;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -57,4 +59,9 @@ export class CreateAdvisorDto {
   @IsNumber()
   @Min(0)
   salary?: number;
+
+  @ApiProperty({ minLength: 8, description: 'Staff login password (email sign-in)' })
+  @IsString()
+  @MinLength(8)
+  password!: string;
 }

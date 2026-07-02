@@ -36,6 +36,18 @@ export interface Project {
   createdAt: string;
 }
 
+export interface Advisor {
+  id: number;
+  firstName: string;
+  lastName: string;
+  email: string;
+  department: string;
+  departmentId?: number;
+  designation: string;
+  designationId?: number;
+  salary?: number;
+}
+
 export interface Student {
   id: number;
   registrationNo: string;

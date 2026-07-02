@@ -10,6 +10,7 @@ import { AdvisorResponseDto } from './dto/advisor-response.dto';
 import { AdvisorRepository, AdvisorPersonRepository } from './advisor.repository';
 import { AdvisorMapper } from './advisor.mapper';
 import { AdvisorErrors } from './advisor.errors';
+import { AdvisorAccountService } from './advisor-account.service';
 
 @Injectable()
 export class AdvisorService {
@@ -18,6 +19,7 @@ export class AdvisorService {
     private readonly personRepository: AdvisorPersonRepository,
     private readonly mapper: AdvisorMapper,
     private readonly dataSource: DataSource,
+    private readonly advisorAccountService: AdvisorAccountService,
   ) {}
 
   async findAll(options: QueryOptions): Promise<{ items: AdvisorResponseDto[]; meta: PaginationMeta }> {
@@ -44,7 +46,7 @@ export class AdvisorService {
   async create(dto: CreateAdvisorDto): Promise<AdvisorResponseDto> {
     await this.assertUniqueEmail(dto.email);
 
-    return this.dataSource.transaction(async (manager) => {
+    const response = await this.dataSource.transaction(async (manager) => {
       const person = manager.create(Person, {
         firstName: dto.firstName?.trim(),
         lastName: dto.lastName?.trim(),
@@ -66,6 +68,16 @@ export class AdvisorService {
       savedAdvisor.person = savedPerson;
       return this.mapper.toResponse(savedAdvisor, savedPerson);
     });
+
+    await this.advisorAccountService.provisionLogin(
+      response.id,
+      dto.email,
+      dto.password,
+      dto.firstName,
+      dto.lastName,
+    );
+
+    return response;
   }
 
   async update(id: number, dto: UpdateAdvisorDto): Promise<AdvisorResponseDto> {
@@ -88,6 +100,11 @@ export class AdvisorService {
 
     await this.personRepository.save(entity.person);
     const saved = await this.repository.save(entity);
+
+    if (dto.password) {
+      await this.advisorAccountService.updatePassword(entity.id, dto.password);
+    }
+
     return this.mapper.toResponse(saved, entity.person);
   }
 

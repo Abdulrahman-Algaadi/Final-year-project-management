@@ -139,9 +139,42 @@ export interface AdvisorDto {
   id: number;
   departmentId: number;
   designationId: number;
+  salary?: number;
   firstName?: string;
   lastName?: string;
   email?: string;
+}
+
+export interface LookupDto {
+  id: number;
+  category: string;
+  value: string;
+}
+
+export interface CreateAdvisorPayload {
+  email: string;
+  password: string;
+  departmentId: number;
+  designationId: number;
+  firstName?: string;
+  lastName?: string;
+  genderId?: number;
+  dateOfBirth?: string;
+  contactNo?: string;
+  salary?: number;
+}
+
+export interface UpdateAdvisorPayload {
+  email?: string;
+  password?: string;
+  departmentId?: number;
+  designationId?: number;
+  firstName?: string;
+  lastName?: string;
+  genderId?: number;
+  dateOfBirth?: string;
+  contactNo?: string;
+  salary?: number;
 }
 
 export interface NotificationDto {
