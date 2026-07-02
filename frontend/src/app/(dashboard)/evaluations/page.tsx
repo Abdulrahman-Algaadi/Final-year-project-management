@@ -18,24 +18,16 @@ import { ErrorState } from "@/components/states/error-state";
 import { TableSkeleton } from "@/components/states/page-skeleton";
 import { PaginationControls } from "@/components/shared/pagination-controls";
 import { PAGE_SIZE } from "@/lib/api/constants";
-import { useAppData } from "@/providers/app-data-provider";
 import { useSession } from "@/providers/session-provider";
 import { useTranslation } from "@/providers/locale-provider";
 import { useEvaluationsPaginated, useGroupEvaluations, useGroupEvaluationsPaginated } from "@/hooks/api/use-evaluations";
 import { useEvaluationMutations } from "@/hooks/api/use-evaluation-mutations";
 import { useGroupMe } from "@/hooks/api/use-group-me";
-
 import { EditGradeDialog } from "@/components/evaluations/edit-grade-dialog";
 import type { Evaluation, GroupEvaluation } from "@/types";
 
 export default function EvaluationsPage() {
-  const {
-    evaluations: mockEvaluations,
-    groupEvaluations: mockGrades,
-    deleteRubric: deleteDemoRubric,
-    toggleGradePublish: toggleDemoPublish,
-  } = useAppData();
-  const { user, isDemo } = useSession();
+  const { user } = useSession();
   const { t } = useTranslation();
   const [search, setSearch] = useState("");
   const [rubricPage, setRubricPage] = useState(1);
@@ -63,38 +55,27 @@ export default function EvaluationsPage() {
   );
   const { updateGrade, removeRubric } = useEvaluationMutations();
 
-  const evaluations = isDemo ? mockEvaluations : (rubricsPaginated?.items ?? []);
-  const rubricTotal = isDemo ? mockEvaluations.length : (rubricsPaginated?.meta.total ?? 0);
-  const groupEvaluations = isDemo ? mockGrades : isStudent ? (apiGrades ?? []) : (gradesPaginated?.items ?? []);
-  const gradeTotal = isDemo ? mockGrades.length : isStudent ? (apiGrades?.length ?? 0) : (gradesPaginated?.meta.total ?? 0);
+  const evaluations = rubricsPaginated?.items ?? [];
+  const rubricTotal = rubricsPaginated?.meta.total ?? 0;
+  const groupEvaluations = isStudent ? (apiGrades ?? []) : (gradesPaginated?.items ?? []);
+  const gradeTotal = isStudent ? (apiGrades?.length ?? 0) : (gradesPaginated?.meta.total ?? 0);
 
   const filteredGrades = useMemo(() => {
-    if (!isDemo && !isStudent) return groupEvaluations;
+    if (!isStudent) return groupEvaluations;
     const q = search.toLowerCase();
     return groupEvaluations
       .filter((g) => !q || g.groupName.toLowerCase().includes(q) || g.evaluationName.toLowerCase().includes(q))
-      .filter((g) => (isStudent ? g.isPublished : true));
-  }, [groupEvaluations, search, isStudent, isDemo]);
+      .filter((g) => g.isPublished);
+  }, [groupEvaluations, search, isStudent]);
 
-  const gradeSource = isDemo
-    ? filteredGrades.filter((g) => {
-        if (isStudent) return g.isPublished;
-        if (user?.role === "Advisor" && user) {
-          const name = `${user.firstName} ${user.lastName}`;
-          return g.evaluatorName.includes(name);
-        }
-        return true;
-      })
-    : filteredGrades;
+  const gradeSource = filteredGrades;
   const totalObtained = gradeSource.reduce((s, g) => s + g.obtainedMarks, 0);
   const totalPossible = gradeSource.reduce((s, g) => s + g.totalMarks, 0);
   const percentage = totalPossible ? Math.round((totalObtained / totalPossible) * 100) : 0;
 
-  const loading = !isDemo && (
-    rubricsLoading
-    || (isStudent ? (gradesLoading || (!myGroup && gradesLoading)) : gradesPaginatedLoading)
-  );
-  const hasError = !isDemo && (rubricsError || (isStudent ? gradesError : gradesPaginatedError));
+  const loading = rubricsLoading
+    || (isStudent ? (gradesLoading || (!myGroup && gradesLoading)) : gradesPaginatedLoading);
+  const hasError = rubricsError || (isStudent ? gradesError : gradesPaginatedError);
   const gradesErrMsg = isStudent ? gradesErr : gradesPaginatedErr;
 
   const openCreateRubric = () => {
@@ -110,11 +91,6 @@ export default function EvaluationsPage() {
   const handleDeleteRubric = async (rubric: Evaluation) => {
     if (!window.confirm(t("evaluations.deleteRubricConfirm", { name: rubric.name }))) return;
     try {
-      if (isDemo) {
-        deleteDemoRubric(rubric.id);
-        toast.success(t("evaluations.rubricDeleted"));
-        return;
-      }
       await removeRubric.mutateAsync(rubric.id);
       toast.success(t("evaluations.rubricDeleted"));
     } catch (err) {
@@ -124,11 +100,6 @@ export default function EvaluationsPage() {
 
   const handleTogglePublish = async (id: number, isPublished: boolean) => {
     try {
-      if (isDemo) {
-        toggleDemoPublish(id);
-        toast.success(!isPublished ? t("evaluations.published") : t("evaluations.hidden"));
-        return;
-      }
       await updateGrade.mutateAsync({ id, isPublished: !isPublished });
       toast.success(!isPublished ? t("evaluations.published") : t("evaluations.hidden"));
     } catch (err) {
@@ -213,7 +184,7 @@ export default function EvaluationsPage() {
                 emptyTitle={isStudent ? t("evaluations.noPublished") : t("evaluations.noEvaluations")}
                 emptyDescription={t("evaluations.desc")}
               />
-              {!isDemo && !isStudent && gradesPaginated && (
+              {!isStudent && gradesPaginated && (
                 <PaginationControls
                   page={gradePage}
                   totalPages={gradesPaginated.meta.totalPages}
@@ -239,7 +210,7 @@ export default function EvaluationsPage() {
                 emptyTitle={t("common.noRecords")}
                 emptyDescription={t("evaluations.desc")}
               />
-              {!isDemo && rubricsPaginated && (
+              {rubricsPaginated && (
                 <PaginationControls
                   page={rubricPage}
                   totalPages={rubricsPaginated.meta.totalPages}

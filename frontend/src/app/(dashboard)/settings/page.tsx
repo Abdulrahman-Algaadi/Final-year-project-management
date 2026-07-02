@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
 import { Moon, Sun, Monitor, LogOut, User, Pencil, KeyRound } from "lucide-react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { PageHeader } from "@/components/shared/page-header";
@@ -12,18 +12,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Select } from "@/components/ui/select";
 import { useSession } from "@/providers/session-provider";
 import { useTranslation } from "@/providers/locale-provider";
 import { updateProfile, changePassword } from "@/lib/api/services/auth.service";
-import type { UserRole } from "@/types";
 
 export default function SettingsPage() {
-  const { user, isDemo, demoRole, setDemoRole, signOut, refresh, setUser } = useSession();
+  const { user, signOut, refresh, setUser } = useSession();
   const { theme, setTheme } = useTheme();
   const { t } = useTranslation();
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ firstName: "", lastName: "", email: "" });
@@ -43,15 +40,6 @@ export default function SettingsPage() {
 
   const initials = `${user.firstName?.[0] ?? user.username[0]}${user.lastName?.[0] ?? ""}`.toUpperCase();
 
-  const handleRoleChange = (role: UserRole) => {
-    setDemoRole(role);
-    const params = new URLSearchParams(searchParams.toString());
-    params.set("demo", "true");
-    params.set("role", role);
-    router.push(`/dashboard?${params.toString()}`);
-    toast.success(t("settings.switchedTo", { role: t(`roles.${role}`) }));
-  };
-
   const handleSignOut = async () => {
     await signOut();
     router.push("/login");
@@ -61,17 +49,6 @@ export default function SettingsPage() {
   const handleSaveProfile = async () => {
     if (!form.email.trim()) {
       toast.error(t("settings.emailRequired"));
-      return;
-    }
-    if (isDemo) {
-      setUser({
-        ...user,
-        firstName: form.firstName.trim() || user.firstName,
-        lastName: form.lastName.trim() || user.lastName,
-        email: form.email.trim(),
-      });
-      setEditing(false);
-      toast.success(t("settings.profileUpdated"));
       return;
     }
     setSaving(true);
@@ -165,48 +142,39 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
-        {!isDemo ? (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2"><KeyRound className="size-5" /> {t("settings.password")}</CardTitle>
-              <CardDescription>{t("settings.passwordDesc")}</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div>
-                <label className="text-sm font-medium">{t("settings.newPassword")}</label>
-                <Input
-                  type="password"
-                  value={passwordForm.password}
-                  onChange={(e) => setPasswordForm({ ...passwordForm, password: e.target.value })}
-                  className="mt-1.5"
-                  autoComplete="new-password"
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium">{t("settings.confirmPassword")}</label>
-                <Input
-                  type="password"
-                  value={passwordForm.confirm}
-                  onChange={(e) => setPasswordForm({ ...passwordForm, confirm: e.target.value })}
-                  className="mt-1.5"
-                  autoComplete="new-password"
-                />
-              </div>
-              <div className="flex justify-end">
-                <Button type="button" onClick={() => void handleChangePassword()} loading={changingPassword}>
-                  {t("settings.updatePassword")}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ) : (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2"><KeyRound className="size-5" /> {t("settings.password")}</CardTitle>
-              <CardDescription>{t("settings.passwordDemoDesc")}</CardDescription>
-            </CardHeader>
-          </Card>
-        )}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2"><KeyRound className="size-5" /> {t("settings.password")}</CardTitle>
+            <CardDescription>{t("settings.passwordDesc")}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div>
+              <label className="text-sm font-medium">{t("settings.newPassword")}</label>
+              <Input
+                type="password"
+                value={passwordForm.password}
+                onChange={(e) => setPasswordForm({ ...passwordForm, password: e.target.value })}
+                className="mt-1.5"
+                autoComplete="new-password"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">{t("settings.confirmPassword")}</label>
+              <Input
+                type="password"
+                value={passwordForm.confirm}
+                onChange={(e) => setPasswordForm({ ...passwordForm, confirm: e.target.value })}
+                className="mt-1.5"
+                autoComplete="new-password"
+              />
+            </div>
+            <div className="flex justify-end">
+              <Button type="button" onClick={() => void handleChangePassword()} loading={changingPassword}>
+                {t("settings.updatePassword")}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
 
         <Card>
           <CardHeader>
@@ -235,23 +203,6 @@ export default function SettingsPage() {
             ))}
           </CardContent>
         </Card>
-
-        {isDemo && (
-          <Card>
-            <CardHeader>
-              <CardTitle>{t("settings.demoRole")}</CardTitle>
-              <CardDescription>{t("settings.demoRoleDesc")}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Select value={demoRole} onChange={(e) => handleRoleChange(e.target.value as UserRole)}>
-                <option value="Student">{t("roles.Student")}</option>
-                <option value="Advisor">{t("roles.Advisor")}</option>
-                <option value="Admin">{t("roles.Admin")}</option>
-                <option value="Coordinator">{t("roles.Coordinator")}</option>
-              </Select>
-            </CardContent>
-          </Card>
-        )}
 
         <Card>
           <CardHeader><CardTitle>{t("settings.session")}</CardTitle></CardHeader>

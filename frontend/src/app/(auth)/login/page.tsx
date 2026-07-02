@@ -254,13 +254,6 @@ export default function LoginPage() {
             </Tabs>
           </CardContent>
         </Card>
-
-        <p className="mt-6 text-center text-sm text-muted-foreground">
-          {t("login.demoPrefix")}{" "}
-          <Link href="/dashboard?demo=true" className="font-medium text-primary hover:underline">
-            {t("login.demoLink")}
-          </Link>
-        </p>
       </motion.div>
     </div>
   );

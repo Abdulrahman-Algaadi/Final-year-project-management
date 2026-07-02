@@ -16,12 +16,9 @@ import { fetchAdvisorsPaginated } from "@/lib/api/services/advisors.service";
 import { fetchLookupsByCategory } from "@/lib/api/services/lookups.service";
 import { fetchReferenceData } from "@/lib/api/services/reference.service";
 import { formatPersonName } from "@/lib/api/mappers/student.mapper";
-import { useAppData } from "@/providers/app-data-provider";
-import { useSession } from "@/providers/session-provider";
 import { useTranslation } from "@/providers/locale-provider";
 import type { Group } from "@/types";
 import type { GroupDto } from "@/types/api";
-import type { DemoGroupMember } from "@/lib/data/mock-data";
 
 const PICKER_PAGE_SIZE = 25;
 
@@ -32,42 +29,8 @@ interface GroupDetailDialogProps {
   canManage?: boolean;
 }
 
-function buildDemoGroupDto(
-  group: Group,
-  members: DemoGroupMember[],
-  projectId?: number,
-): GroupDto {
-  return {
-    id: group.id,
-    groupName: group.groupName,
-    createdOn: group.createdOn,
-    members: members.map((m) => ({
-      id: m.id,
-      studentId: m.studentId,
-      isLeader: m.isLeader,
-      statusId: 10,
-      assignmentDate: group.createdOn,
-    })),
-    project: projectId
-      ? { id: group.id, projectId, assignedDate: group.createdOn }
-      : undefined,
-  };
-}
-
 export function GroupDetailDialog({ group, open, onOpenChange, canManage }: GroupDetailDialogProps) {
   const { t } = useTranslation();
-  const { isDemo } = useSession();
-  const {
-    students: mockStudents,
-    projects: mockProjects,
-    getDemoGroupMembers,
-    getDemoGroupProjectId,
-    updateGroup: updateDemoGroup,
-    deleteGroup: deleteDemoGroup,
-    addGroupMember: addDemoMember,
-    removeGroupMember: removeDemoMember,
-    assignGroupProject: assignDemoProject,
-  } = useAppData();
 
   const [detail, setDetail] = useState<GroupDto | null>(null);
   const [loading, setLoading] = useState(false);
@@ -94,19 +57,6 @@ export function GroupDetailDialog({ group, open, onOpenChange, canManage }: Grou
       return;
     }
 
-    if (isDemo) {
-      const members = getDemoGroupMembers(group.id);
-      const pid = getDemoGroupProjectId(group.id);
-      setDetail(buildDemoGroupDto(group, members, pid));
-      const nameMap: Record<number, string> = {};
-      members.forEach((m) => { nameMap[m.studentId] = m.studentName; });
-      setNames(nameMap);
-      setProjectId(pid ? String(pid) : "");
-      setProjectLabel(pid ? (mockProjects.find((p) => p.id === pid)?.title ?? group.projectTitle ?? "") : "");
-      setLoading(false);
-      return;
-    }
-
     let cancelled = false;
     setLoading(true);
     fetchGroupById(group.id)
@@ -120,10 +70,10 @@ export function GroupDetailDialog({ group, open, onOpenChange, canManage }: Grou
       .catch(() => toast.error(t("states.loadError")))
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [open, group, isDemo, t, getDemoGroupMembers, getDemoGroupProjectId, mockProjects, group?.projectTitle]);
+  }, [open, group, t, group?.projectTitle]);
 
   useEffect(() => {
-    if (isDemo || !detail) return;
+    if (!detail) return;
     const hasAdvisorData = (detail.advisors?.length ?? 0) > 0 || (detail.members?.length ?? 0) > 0;
     if (!hasAdvisorData) return;
     let cancelled = false;
@@ -148,10 +98,10 @@ export function GroupDetailDialog({ group, open, onOpenChange, canManage }: Grou
       setAdvisorNames(advisorMap);
     });
     return () => { cancelled = true; };
-  }, [detail, isDemo, group?.projectTitle]);
+  }, [detail, group?.projectTitle]);
 
   useEffect(() => {
-    if (isDemo || !open) return;
+    if (!open) return;
     let cancelled = false;
     fetchLookupsByCategory("AdvisorRole").then((roles) => {
       if (cancelled) return;
@@ -167,7 +117,7 @@ export function GroupDetailDialog({ group, open, onOpenChange, canManage }: Grou
       }
     });
     return () => { cancelled = true; };
-  }, [open, isDemo, canManage]);
+  }, [open, canManage]);
 
   const memberRows = useMemo(() => detail?.members ?? [], [detail]);
   const advisorRows = useMemo(() => detail?.advisors ?? [], [detail]);
@@ -180,28 +130,6 @@ export function GroupDetailDialog({ group, open, onOpenChange, canManage }: Grou
     [advisorRows],
   );
   const hasProject = Boolean(detail?.project?.projectId);
-
-  const demoStudentOptions = useMemo(
-    () =>
-      mockStudents
-        .filter((s) => !memberStudentIds.has(s.id))
-        .map((s) => ({
-          value: String(s.id),
-          label: `${s.firstName} ${s.lastName} (${s.registrationNo})`,
-          keywords: `${s.email} ${s.registrationNo}`,
-        })),
-    [mockStudents, memberStudentIds],
-  );
-
-  const demoProjectOptions = useMemo(
-    () =>
-      mockProjects.map((p) => ({
-        value: String(p.id),
-        label: p.title,
-        keywords: p.description ?? "",
-      })),
-    [mockProjects],
-  );
 
   const searchStudents = useCallback(
     async (query: string, page: number) => {
@@ -261,25 +189,8 @@ export function GroupDetailDialog({ group, open, onOpenChange, canManage }: Grou
     [assignedAdvisorIds],
   );
 
-  const refreshDemoDetail = () => {
-    if (!group || !isDemo) return;
-    const members = getDemoGroupMembers(group.id);
-    const pid = getDemoGroupProjectId(group.id);
-    setDetail(buildDemoGroupDto(group, members, pid));
-    const nameMap: Record<number, string> = {};
-    members.forEach((m) => { nameMap[m.studentId] = m.studentName; });
-    setNames(nameMap);
-  };
-
   const handleAddMember = async () => {
     if (!group || !studentId) return;
-    if (isDemo) {
-      addDemoMember(group.id, Number(studentId));
-      refreshDemoDetail();
-      setStudentId("");
-      toast.success(t("groups.memberAdded"));
-      return;
-    }
     try {
       const dto = await addMember.mutateAsync({
         groupId: group.id,
@@ -295,12 +206,6 @@ export function GroupDetailDialog({ group, open, onOpenChange, canManage }: Grou
 
   const handleRemoveMember = async (memberId: number) => {
     if (!group) return;
-    if (isDemo) {
-      removeDemoMember(group.id, memberId);
-      refreshDemoDetail();
-      toast.success(t("groups.memberRemoved"));
-      return;
-    }
     try {
       const dto = await removeMember.mutateAsync({ groupId: group.id, memberId });
       setDetail(dto);
@@ -312,13 +217,6 @@ export function GroupDetailDialog({ group, open, onOpenChange, canManage }: Grou
 
   const handleAssignProject = async () => {
     if (!group || !projectId) return;
-    if (isDemo) {
-      assignDemoProject(group.id, Number(projectId));
-      refreshDemoDetail();
-      setProjectLabel(mockProjects.find((p) => p.id === Number(projectId))?.title ?? "");
-      toast.success(t("groups.projectAssigned"));
-      return;
-    }
     try {
       const dto = await assignProject.mutateAsync({
         groupId: group.id,
@@ -376,11 +274,6 @@ export function GroupDetailDialog({ group, open, onOpenChange, canManage }: Grou
 
   const handleRename = async () => {
     if (!group || !groupName.trim()) return;
-    if (isDemo) {
-      updateDemoGroup(group.id, groupName.trim());
-      toast.success(t("groups.renamed"));
-      return;
-    }
     try {
       await update.mutateAsync({ id: group.id, groupName: groupName.trim() });
       toast.success(t("groups.renamed"));
@@ -392,12 +285,6 @@ export function GroupDetailDialog({ group, open, onOpenChange, canManage }: Grou
   const handleDelete = async () => {
     if (!group) return;
     if (!window.confirm(t("groups.deleteConfirm", { name: group.groupName }))) return;
-    if (isDemo) {
-      deleteDemoGroup(group.id);
-      toast.success(t("groups.deleted"));
-      onOpenChange(false);
-      return;
-    }
     try {
       await remove.mutateAsync(group.id);
       toast.success(t("groups.deleted"));
@@ -426,7 +313,7 @@ export function GroupDetailDialog({ group, open, onOpenChange, canManage }: Grou
                 <h4 className="text-sm font-semibold">{t("groups.rename")}</h4>
                 <div className="flex gap-2">
                   <Input value={groupName} onChange={(e) => setGroupName(e.target.value)} className="flex-1" />
-                  <Button type="button" className="gap-1.5" onClick={() => void handleRename()} loading={!isDemo && update.isPending}>
+                  <Button type="button" className="gap-1.5" onClick={() => void handleRename()} loading={update.isPending}>
                     <Pencil className="size-4" />
                     {t("common.save")}
                   </Button>
@@ -462,7 +349,7 @@ export function GroupDetailDialog({ group, open, onOpenChange, canManage }: Grou
               </ul>
             </section>
 
-            {!canManage && !isDemo && hasProject && (
+            {!canManage && hasProject && (
               <section>
                 <h4 className="mb-2 text-sm font-semibold">{t("groups.advisors")}</h4>
                 <ul className="space-y-2">
@@ -485,30 +372,18 @@ export function GroupDetailDialog({ group, open, onOpenChange, canManage }: Grou
                 <section className="space-y-2">
                   <h4 className="text-sm font-semibold">{t("groups.addMember")}</h4>
                   <div className="flex gap-2">
-                    {isDemo ? (
-                      <Combobox
-                        options={demoStudentOptions}
-                        value={studentId}
-                        onValueChange={setStudentId}
-                        placeholder={t("groups.selectStudent")}
-                        searchPlaceholder={t("common.typeToSearch")}
-                        emptyMessage={t("common.noRecords")}
-                        className="flex-1"
-                      />
-                    ) : (
-                      <AsyncSearchCombobox
-                        value={studentId}
-                        onValueChange={setStudentId}
-                        onSearch={searchStudents}
-                        placeholder={t("groups.selectStudent")}
-                        searchPlaceholder={t("common.typeToSearch")}
-                        emptyMessage={t("common.noRecords")}
-                        loadMoreLabel={t("common.loadMore")}
-                        searchingLabel={t("common.searching")}
-                        className="flex-1"
-                      />
-                    )}
-                    <Button type="button" className="gap-1.5 shrink-0" onClick={() => void handleAddMember()} loading={!isDemo && addMember.isPending}>
+                    <AsyncSearchCombobox
+                      value={studentId}
+                      onValueChange={setStudentId}
+                      onSearch={searchStudents}
+                      placeholder={t("groups.selectStudent")}
+                      searchPlaceholder={t("common.typeToSearch")}
+                      emptyMessage={t("common.noRecords")}
+                      loadMoreLabel={t("common.loadMore")}
+                      searchingLabel={t("common.searching")}
+                      className="flex-1"
+                    />
+                    <Button type="button" className="gap-1.5 shrink-0" onClick={() => void handleAddMember()} loading={addMember.isPending}>
                       <UserPlus className="size-4" />
                       {t("common.create")}
                     </Button>
@@ -518,42 +393,27 @@ export function GroupDetailDialog({ group, open, onOpenChange, canManage }: Grou
                 <section className="space-y-2">
                   <h4 className="text-sm font-semibold">{t("groups.assignProject")}</h4>
                   <div className="flex gap-2">
-                    {isDemo ? (
-                      <Combobox
-                        options={demoProjectOptions}
-                        value={projectId}
-                        onValueChange={(value) => {
-                          setProjectId(value);
-                          setProjectLabel(demoProjectOptions.find((o) => o.value === value)?.label ?? "");
-                        }}
-                        placeholder={t("groups.selectProject")}
-                        searchPlaceholder={t("common.typeToSearch")}
-                        emptyMessage={t("common.noRecords")}
-                        className="flex-1"
-                      />
-                    ) : (
-                      <AsyncSearchCombobox
-                        value={projectId}
-                        onValueChange={(value, label) => {
-                          setProjectId(value);
-                          if (label) setProjectLabel(label);
-                        }}
-                        onSearch={searchProjects}
-                        selectedLabel={projectLabel}
-                        placeholder={t("groups.selectProject")}
-                        searchPlaceholder={t("common.typeToSearch")}
-                        emptyMessage={t("common.noRecords")}
-                        loadMoreLabel={t("common.loadMore")}
-                        searchingLabel={t("common.searching")}
-                        className="flex-1"
-                        disabled={hasProject}
-                      />
-                    )}
+                    <AsyncSearchCombobox
+                      value={projectId}
+                      onValueChange={(value, label) => {
+                        setProjectId(value);
+                        if (label) setProjectLabel(label);
+                      }}
+                      onSearch={searchProjects}
+                      selectedLabel={projectLabel}
+                      placeholder={t("groups.selectProject")}
+                      searchPlaceholder={t("common.typeToSearch")}
+                      emptyMessage={t("common.noRecords")}
+                      loadMoreLabel={t("common.loadMore")}
+                      searchingLabel={t("common.searching")}
+                      className="flex-1"
+                      disabled={hasProject}
+                    />
                     <Button
                       type="button"
                       className="shrink-0"
                       onClick={() => void handleAssignProject()}
-                      loading={!isDemo && assignProject.isPending}
+                      loading={assignProject.isPending}
                       disabled={hasProject || !projectId}
                     >
                       {t("common.save")}
@@ -563,7 +423,7 @@ export function GroupDetailDialog({ group, open, onOpenChange, canManage }: Grou
 
                 <section>
                   <h4 className="mb-2 text-sm font-semibold">{t("groups.advisors")}</h4>
-                  {!isDemo && !hasProject ? (
+                  {!hasProject ? (
                     <p className="text-sm text-muted-foreground">{t("groups.assignProjectFirst")}</p>
                   ) : (
                     <>
@@ -578,22 +438,20 @@ export function GroupDetailDialog({ group, open, onOpenChange, canManage }: Grou
                                 ({advisorRoleLabels[a.advisorRoleId] ?? a.advisorRoleId})
                               </span>
                             </span>
-                            {!isDemo && (
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                className="text-destructive"
-                                onClick={() => void handleRemoveAdvisor(a.id)}
-                                aria-label={t("common.delete")}
-                              >
-                                <Trash2 className="size-4" />
-                              </Button>
-                            )}
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="text-destructive"
+                              onClick={() => void handleRemoveAdvisor(a.id)}
+                              aria-label={t("common.delete")}
+                            >
+                              <Trash2 className="size-4" />
+                            </Button>
                           </li>
                         ))}
                       </ul>
-                      {!isDemo && hasProject && (
+                      {hasProject && (
                         <div className="mt-3 space-y-2">
                           <h5 className="text-sm font-medium">{t("groups.assignAdvisor")}</h5>
                           <div className="flex flex-col gap-2 sm:flex-row">
@@ -639,7 +497,7 @@ export function GroupDetailDialog({ group, open, onOpenChange, canManage }: Grou
                     variant="outline"
                     className="gap-1.5 text-destructive"
                     onClick={() => void handleDelete()}
-                    loading={!isDemo && remove.isPending}
+                    loading={remove.isPending}
                   >
                     <Trash2 className="size-4" />
                     {t("groups.deleteGroup")}

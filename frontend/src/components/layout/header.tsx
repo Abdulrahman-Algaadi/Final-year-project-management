@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
 import { Menu, Moon, Sun, Bell } from "lucide-react";
 import { useTheme } from "next-themes";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -22,10 +21,6 @@ export function Header({ user, onMenuClick, title }: HeaderProps) {
   const { theme, setTheme } = useTheme();
   const unread = useUnreadCount();
   const { t, dir } = useTranslation();
-  const searchParams = useSearchParams();
-  const demoQuery = searchParams.get("demo") === "true"
-    ? `?demo=true&role=${searchParams.get("role") ?? user.role}`
-    : "";
   const initials = `${user.firstName?.[0] ?? user.username[0]}${user.lastName?.[0] ?? ""}`.toUpperCase();
 
   return (
@@ -45,7 +40,7 @@ export function Header({ user, onMenuClick, title }: HeaderProps) {
           <Moon className="absolute size-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
         </Button>
         <Button variant="ghost" size="icon" className="relative" asChild>
-          <Link href={`/notifications${demoQuery}`} aria-label={`${t("nav.notifications")}${unread ? `, ${unread}` : ""}`}>
+          <Link href="/notifications" aria-label={`${t("nav.notifications")}${unread ? `, ${unread}` : ""}`}>
             <Bell className="size-4" />
             {unread > 0 && (
               <span className={cn(
@@ -57,7 +52,7 @@ export function Header({ user, onMenuClick, title }: HeaderProps) {
             )}
           </Link>
         </Button>
-        <Link href={`/settings${demoQuery}`} className="ms-1 flex items-center gap-2 rounded-lg border border-border px-2 py-1.5 transition-colors hover:bg-muted/50">
+        <Link href="/settings" className="ms-1 flex items-center gap-2 rounded-lg border border-border px-2 py-1.5 transition-colors hover:bg-muted/50">
           <Avatar className="size-8">
             <AvatarFallback className="bg-primary/10 text-xs text-primary">{initials}</AvatarFallback>
           </Avatar>

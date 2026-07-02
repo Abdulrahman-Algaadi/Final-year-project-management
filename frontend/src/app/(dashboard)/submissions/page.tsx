@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState } from "react";
 import { Plus, Upload, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
@@ -13,7 +13,6 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { useAppData } from "@/providers/app-data-provider";
 import { useSession } from "@/providers/session-provider";
 import { useTranslation } from "@/providers/locale-provider";
 import { useGroupMe } from "@/hooks/api/use-group-me";
@@ -23,14 +22,11 @@ import { getSubmissionDownloadUrl } from "@/lib/api/services/submissions.service
 import { ErrorState } from "@/components/states/error-state";
 import { TableSkeleton } from "@/components/states/page-skeleton";
 import { ReviewSubmissionDialog, type ReviewStatus } from "@/components/submissions/review-submission-dialog";
-import { useSchedulableGroups } from "@/hooks/api/use-schedulable-groups";
-import { SUBMISSION_TYPES } from "@/lib/data/mock-data";
-
+import { SUBMISSION_TYPES } from "@/lib/data/constants";
 import type { Submission } from "@/types";
 
 export default function SubmissionsPage() {
-  const { submissions: mockSubmissions, addSubmission, reviewSubmission } = useAppData();
-  const { user, isDemo } = useSession();
+  const { user } = useSession();
   const { t } = useTranslation();
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -38,57 +34,26 @@ export default function SubmissionsPage() {
   const [reviewTarget, setReviewTarget] = useState<Submission | null>(null);
   const [uploading, setUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [form, setForm] = useState({ title: "", submissionType: "ProgressReport", groupName: "", groupId: 0, filePath: "" });
+  const [form, setForm] = useState({ title: "", submissionType: "ProgressReport" });
 
   const isStudent = user?.role === "Student";
-  const isAdvisor = user?.role === "Advisor";
   const canReview = user?.role === "Advisor" || user?.role === "Admin" || user?.role === "Coordinator";
 
   const { data: myGroup } = useGroupMe();
-  const { groups: schedulableGroups } = useSchedulableGroups();
 
-  useEffect(() => {
-    if (isDemo && isStudent && myGroup) {
-      setForm((prev) => ({
-        ...prev,
-        groupId: myGroup.id,
-        groupName: myGroup.groupName,
-      }));
-    }
-  }, [isDemo, isStudent, myGroup]);
-
-  const demoGroupIds = useMemo(
-    () => new Set(schedulableGroups.map((g) => g.id)),
-    [schedulableGroups],
-  );
-
-  const scopedDemoSubmissions = useMemo(() => {
-    if (!isDemo) return mockSubmissions;
-    if (isStudent && myGroup) {
-      return mockSubmissions.filter((s) => s.groupId === myGroup.id);
-    }
-    if (isAdvisor) {
-      return mockSubmissions.filter((s) => demoGroupIds.has(s.groupId));
-    }
-    return mockSubmissions;
-  }, [isDemo, mockSubmissions, isStudent, isAdvisor, myGroup, demoGroupIds]);
   const { data: paginated, isLoading: listLoading, isError, error, refetch } = useSubmissionsPaginated(
     { search: search || undefined, page, limit: PAGE_SIZE },
     !isStudent,
   );
   const { data: groupSubmissions, isLoading: groupLoading } = useSubmissions(
-    isStudent && !isDemo ? { search: search || undefined, limit: 100 } : undefined,
+    isStudent ? { search: search || undefined, limit: 100 } : undefined,
     isStudent ? myGroup?.id : undefined,
   );
   const createMutation = useCreateSubmission();
   const reviewMutation = useReviewSubmission();
 
-  const isLoading = !isDemo && (isStudent ? groupLoading : listLoading);
-  const submissions = isDemo
-    ? scopedDemoSubmissions
-    : isStudent
-      ? (groupSubmissions ?? [])
-      : (paginated?.items ?? []);
+  const isLoading = isStudent ? groupLoading : listLoading;
+  const submissions = isStudent ? (groupSubmissions ?? []) : (paginated?.items ?? []);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
@@ -111,11 +76,7 @@ export default function SubmissionsPage() {
   const displaySubmissions = isStudent ? pagedSubmissions : filtered;
   const studentTotalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
 
-  const handleDownload = async (id: number, fallbackPath: string) => {
-    if (isDemo) {
-      window.open(fallbackPath, "_blank");
-      return;
-    }
+  const handleDownload = async (id: number) => {
     try {
       const url = await getSubmissionDownloadUrl(id);
       window.open(url, "_blank");
@@ -131,49 +92,25 @@ export default function SubmissionsPage() {
     }
 
     try {
-      if (isDemo) {
-        if (!myGroup) {
-          toast.error(t("groups.selectGroup"));
-          return;
-        }
-        if (!form.filePath && !selectedFile) {
-          toast.error(t("submissions.titleRequired"));
-          return;
-        }
-        addSubmission({
-          groupId: myGroup?.id ?? form.groupId,
-          groupName: myGroup?.groupName ?? form.groupName,
-          title: form.title,
-          submissionType: form.submissionType,
-          filePath: form.filePath || selectedFile?.name || "/submissions/uploaded-file.pdf",
-        });
-      } else {
-        if (!myGroup?.id) {
-          toast.error("No group assigned");
-          return;
-        }
-        if (!selectedFile) {
-          toast.error(t("submissions.titleRequired"));
-          return;
-        }
-        setUploading(true);
-        await createMutation.mutateAsync({
-          groupId: myGroup.id,
-          title: form.title.trim(),
-          submissionType: form.submissionType,
-          file: selectedFile,
-        });
+      if (!myGroup?.id) {
+        toast.error("No group assigned");
+        return;
       }
+      if (!selectedFile) {
+        toast.error(t("submissions.titleRequired"));
+        return;
+      }
+      setUploading(true);
+      await createMutation.mutateAsync({
+        groupId: myGroup.id,
+        title: form.title.trim(),
+        submissionType: form.submissionType,
+        file: selectedFile,
+      });
       toast.success(t("submissions.uploadSuccess"));
       setDialogOpen(false);
       setSelectedFile(null);
-      setForm({
-        title: "",
-        submissionType: "ProgressReport",
-        groupName: myGroup?.groupName ?? "",
-        groupId: myGroup?.id ?? 0,
-        filePath: "",
-      });
+      setForm({ title: "", submissionType: "ProgressReport" });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Upload failed");
     } finally {
@@ -183,11 +120,7 @@ export default function SubmissionsPage() {
 
   const handleReview = async (id: number, status: string) => {
     try {
-      if (isDemo) {
-        reviewSubmission(id, status);
-      } else {
-        await reviewMutation.mutateAsync({ id, status });
-      }
+      await reviewMutation.mutateAsync({ id, status });
       const message =
         status === "Approved"
           ? t("submissions.approved")
@@ -206,7 +139,7 @@ export default function SubmissionsPage() {
     void handleReview(reviewTarget.id, status);
   };
 
-  const canUpload = isStudent && (isDemo || !!myGroup?.id);
+  const canUpload = isStudent && !!myGroup?.id;
 
   return (
     <DashboardLayout title={t("nav.submissions")}>
@@ -233,9 +166,9 @@ export default function SubmissionsPage() {
             <CardContent className="p-4 text-sm">{t("submissions.revisionBanner")}</CardContent>
           </Card>
         )}
-        {!isDemo && isLoading ? (
+        {isLoading ? (
           <TableSkeleton rows={6} />
-        ) : !isDemo && isError ? (
+        ) : isError ? (
           <ErrorState message={error instanceof Error ? error.message : undefined} onRetry={() => refetch()} />
         ) : (
         <>
@@ -248,7 +181,7 @@ export default function SubmissionsPage() {
               showGroup={!isStudent}
               showRevisionHint={isStudent}
               canReview={canReview && s.status === "Pending"}
-              onDownload={() => void handleDownload(s.id, s.filePath)}
+              onDownload={() => void handleDownload(s.id)}
               onReview={canReview && s.status === "Pending" ? () => setReviewTarget(s) : undefined}
             />
           )}
@@ -266,7 +199,7 @@ export default function SubmissionsPage() {
             onPageChange={setPage}
           />
         )}
-        {!isDemo && !isStudent && paginated?.meta && (
+        {!isStudent && paginated?.meta && (
           <PaginationControls
             page={paginated.meta.page}
             totalPages={paginated.meta.totalPages}
@@ -309,7 +242,6 @@ export default function SubmissionsPage() {
                 onChange={(e) => {
                   const file = e.target.files?.[0] ?? null;
                   setSelectedFile(file);
-                  setForm({ ...form, filePath: file?.name ?? "" });
                 }}
               />
             </div>

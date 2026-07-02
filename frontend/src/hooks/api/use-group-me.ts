@@ -4,24 +4,18 @@ import { useQuery } from "@tanstack/react-query";
 import { useApiReady } from "@/hooks/use-api-ready";
 import { mapGroup } from "@/lib/api/mappers/group.mapper";
 import { fetchGroupMe, fetchReferenceData } from "@/lib/api/services/reference.service";
-import { useAppData } from "@/providers/app-data-provider";
 import { useSession } from "@/providers/session-provider";
 
 export function useGroupMe() {
-  const { isDemo, user } = useSession();
+  const { user } = useSession();
   const apiReady = useApiReady();
-  const { getDemoGroupForStudent } = useAppData();
 
   return useQuery({
-    queryKey: ["groups", "me", isDemo, user?.id],
+    queryKey: ["groups", "me", user?.id],
     queryFn: async () => {
-      if (isDemo) {
-        const studentId = user?.id ?? 1;
-        return getDemoGroupForStudent(studentId) ?? null;
-      }
       const [dto, ref] = await Promise.all([fetchGroupMe(), fetchReferenceData()]);
       return mapGroup(dto, ref);
     },
-    enabled: user?.role === "Student" && (isDemo || apiReady),
+    enabled: user?.role === "Student" && apiReady,
   });
 }

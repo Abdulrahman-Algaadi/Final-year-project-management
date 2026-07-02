@@ -115,13 +115,9 @@
     "registrationNo": "Registration number",
     "staffTab": "Staff",
     "studentTab": "Student",
-    "studentHint": "Use the registration number and password from your department.",
-    "demoLink": "View dashboard UI",
-    "demoPrefix": "Demo access?"
+    "studentHint": "Use the registration number and password from your department."
   },
   "dashboard": {
-    "demoMode": "Demo mode",
-    "demoHint": "Switch roles to preview different dashboards",
     "welcome": "Welcome back",
     "studentDesc": "Track your project progress, submissions, and meetings.",
     "advisorTitle": "Advisor dashboard",
@@ -425,8 +421,7 @@
     "record": "Record",
     "action": "Action",
     "performedBy": "User ID",
-    "date": "Date",
-    "demoOnly": "Audit logs are available in live mode. Sign in with a real account to view activity history."
+    "date": "Date"
   },
   "settings": {
     "title": "Settings",
@@ -438,8 +433,6 @@
     "light": "Light",
     "dark": "Dark",
     "system": "System",
-    "demoRole": "Demo role switcher",
-    "demoRoleDesc": "Preview different role dashboards",
     "session": "Session",
     "signedOut": "Signed out",
     "switchedTo": "Switched to {role} view",
@@ -454,8 +447,7 @@
     "updatePassword": "Update password",
     "passwordUpdated": "Password updated successfully",
     "passwordMin": "Password must be at least 8 characters",
-    "passwordMismatch": "Passwords do not match",
-    "passwordDemoDesc": "Password changes are available when signed in with a live account."
+    "passwordMismatch": "Passwords do not match"
   },
   "states": {
     "accessRestricted": "Access restricted",

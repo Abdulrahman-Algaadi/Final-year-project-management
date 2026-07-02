@@ -13,14 +13,14 @@ interface DashboardLayoutProps {
 }
 
 export function DashboardLayout({ children, title, requireAuth = true }: DashboardLayoutProps) {
-  const { user, loading, isDemo } = useSession();
+  const { user, loading } = useSession();
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && !user && requireAuth && !isDemo) {
+    if (!loading && !user && requireAuth) {
       router.replace("/login");
     }
-  }, [user, loading, requireAuth, isDemo, router]);
+  }, [user, loading, requireAuth, router]);
 
   if (loading) return <DashboardSkeleton />;
   if (!user) return <DashboardSkeleton />;

@@ -16,7 +16,7 @@ import { PAGE_SIZE } from "@/lib/api/constants";
 import { formatDate } from "@/lib/utils";
 
 export default function AuditPage() {
-  const { user, isDemo } = useSession();
+  const { user } = useSession();
   const { t } = useTranslation();
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -43,14 +43,7 @@ export default function AuditPage() {
       <div className="space-y-6">
         <PageHeader title={t("audit.title")} description={t("audit.desc")} />
 
-        {isDemo ? (
-          <Card>
-            <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
-              <ScrollText className="size-10 text-muted-foreground" />
-              <p className="text-sm text-muted-foreground">{t("audit.demoOnly")}</p>
-            </CardContent>
-          </Card>
-        ) : isLoading ? (
+        {isLoading ? (
           <TableSkeleton rows={8} />
         ) : isError ? (
           <ErrorState message={error instanceof Error ? error.message : undefined} onRetry={() => refetch()} />

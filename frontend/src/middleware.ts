@@ -27,10 +27,6 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  if (request.nextUrl.searchParams.get("demo") === "true") {
-    return NextResponse.next();
-  }
-
   if (!hasSupabaseConfig()) {
     console.error(
       "[middleware] Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY. " +

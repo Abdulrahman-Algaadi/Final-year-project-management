@@ -11,15 +11,11 @@ import { PaginationControls } from "@/components/shared/pagination-controls";
 import { Button } from "@/components/ui/button";
 import { ErrorState } from "@/components/states/error-state";
 import { TableSkeleton } from "@/components/states/page-skeleton";
-import { useAppData } from "@/providers/app-data-provider";
-import { useSession } from "@/providers/session-provider";
 import { useTranslation } from "@/providers/locale-provider";
 import { useMarkAllNotificationsRead, useMarkNotificationRead, useNotificationsPaginated, useUnreadNotifications } from "@/hooks/api/use-notifications";
 import { PAGE_SIZE } from "@/lib/api/constants";
 
 export default function NotificationsPage() {
-  const { isDemo } = useSession();
-  const { notifications: mockNotifications, markNotificationRead, markAllNotificationsRead } = useAppData();
   const [page, setPage] = useState(1);
   const { data: paginated, isLoading, isError, error, refetch } = useNotificationsPaginated({ page, limit: PAGE_SIZE });
   const { data: unreadList } = useUnreadNotifications();
@@ -27,23 +23,17 @@ export default function NotificationsPage() {
   const markAllReadMutation = useMarkAllNotificationsRead();
   const { t } = useTranslation();
 
-  const notifications = isDemo ? mockNotifications : (paginated?.items ?? []);
+  const notifications = paginated?.items ?? [];
 
   const sorted = useMemo(
     () => [...notifications].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
     [notifications],
   );
 
-  const unreadCount = isDemo
-    ? notifications.filter((n) => !n.isRead).length
-    : (unreadList?.length ?? 0);
+  const unreadCount = unreadList?.length ?? 0;
   const unreadLabel = unreadCount === 1 ? t("notifications.unread") : t("notifications.unreadPlural");
 
   const handleMarkRead = async (id: number) => {
-    if (isDemo) {
-      markNotificationRead(id);
-      return;
-    }
     try {
       await markReadMutation.mutateAsync(id);
     } catch (err) {
@@ -52,11 +42,6 @@ export default function NotificationsPage() {
   };
 
   const handleMarkAllRead = async () => {
-    if (isDemo) {
-      markAllNotificationsRead();
-      toast.success(t("notifications.markedAll"));
-      return;
-    }
     try {
       await markAllReadMutation.mutateAsync();
       toast.success(t("notifications.markedAll"));
@@ -80,9 +65,9 @@ export default function NotificationsPage() {
           }
         />
 
-        {!isDemo && isLoading ? (
+        {isLoading ? (
           <TableSkeleton rows={4} />
-        ) : !isDemo && isError ? (
+        ) : isError ? (
           <ErrorState message={error instanceof Error ? error.message : undefined} onRetry={() => refetch()} />
         ) : (
           <CardCollection
@@ -101,7 +86,7 @@ export default function NotificationsPage() {
           />
         )}
 
-        {!isDemo && paginated && (
+        {paginated && (
           <PaginationControls
             page={page}
             totalPages={paginated.meta.totalPages}

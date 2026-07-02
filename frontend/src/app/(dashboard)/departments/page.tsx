@@ -15,7 +15,6 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Combobox } from "@/components/ui/combobox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { useAppData } from "@/providers/app-data-provider";
 import { useSession } from "@/providers/session-provider";
 import { useTranslation } from "@/providers/locale-provider";
 import { useDepartmentMutations, useDepartments } from "@/hooks/api/use-departments";
@@ -23,42 +22,41 @@ import { formatDate } from "@/lib/utils";
 import type { Department } from "@/types";
 
 export default function DepartmentsPage() {
-  const { departments: mockDepartments, addDepartment, updateDepartment, deleteDepartment } = useAppData();
-  const { user, isDemo } = useSession();
+  const { user } = useSession();
   const { t } = useTranslation();
   const [selectedId, setSelectedId] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Department | null>(null);
   const [form, setForm] = useState({ name: "", code: "" });
 
-  const { data: apiDepartments, isLoading, isError, error, refetch } = useDepartments({
+  const { data: departments, isLoading, isError, error, refetch } = useDepartments({
     limit: 100,
   });
   const { create, update, remove } = useDepartmentMutations();
 
   const canAccess = user?.role === "Admin" || user?.role === "Coordinator";
-  const departments = isDemo ? mockDepartments : (apiDepartments ?? []);
+  const departmentList = departments ?? [];
 
   const comboboxOptions = useMemo(
     () => [
       { value: "", label: t("departments.all"), keywords: "all" },
-      ...departments.map((d) => ({
+      ...departmentList.map((d) => ({
         value: String(d.id),
         label: `${d.code} — ${d.name}`,
         keywords: `${d.code} ${d.name}`,
       })),
     ],
-    [departments, t],
+    [departmentList, t],
   );
 
   const filtered = useMemo(() => {
-    if (!selectedId) return departments;
-    return departments.filter((d) => String(d.id) === selectedId);
-  }, [departments, selectedId]);
+    if (!selectedId) return departmentList;
+    return departmentList.filter((d) => String(d.id) === selectedId);
+  }, [departmentList, selectedId]);
 
   const selectedDepartment: Department | undefined = useMemo(
-    () => departments.find((d) => String(d.id) === selectedId),
-    [departments, selectedId],
+    () => departmentList.find((d) => String(d.id) === selectedId),
+    [departmentList, selectedId],
   );
 
   if (!canAccess) {
@@ -87,15 +85,7 @@ export default function DepartmentsPage() {
       return;
     }
     try {
-      if (isDemo) {
-        if (editing) {
-          updateDepartment(editing.id, { name: form.name, code: form.code });
-          toast.success(t("departments.updated"));
-        } else {
-          addDepartment(form);
-          toast.success(t("departments.created"));
-        }
-      } else if (editing) {
+      if (editing) {
         await update.mutateAsync({ id: editing.id, name: form.name, code: form.code });
         toast.success(t("departments.updated"));
       } else {
@@ -113,12 +103,6 @@ export default function DepartmentsPage() {
   const handleDelete = async (department: Department) => {
     if (!window.confirm(t("departments.deleteConfirm", { name: department.name }))) return;
     try {
-      if (isDemo) {
-        deleteDepartment(department.id);
-        if (selectedId === String(department.id)) setSelectedId("");
-        toast.success(t("departments.deleted"));
-        return;
-      }
       await remove.mutateAsync(department.id);
       if (selectedId === String(department.id)) setSelectedId("");
       toast.success(t("departments.deleted"));
@@ -149,7 +133,7 @@ export default function DepartmentsPage() {
             placeholder={t("departments.selectPlaceholder")}
             searchPlaceholder={t("departments.search")}
             emptyMessage={t("common.noRecords")}
-            disabled={!isDemo && isLoading}
+            disabled={isLoading}
           />
         </div>
 
@@ -177,9 +161,9 @@ export default function DepartmentsPage() {
           </Card>
         )}
 
-        {!isDemo && isLoading ? (
+        {isLoading ? (
           <TableSkeleton rows={5} />
-        ) : !isDemo && isError ? (
+        ) : isError ? (
           <ErrorState message={error instanceof Error ? error.message : undefined} onRetry={() => refetch()} />
         ) : (
           <CardCollection
@@ -188,7 +172,7 @@ export default function DepartmentsPage() {
             renderCard={(d) => (
               <DepartmentCard
                 department={d}
-                canManage={!isDemo}
+                canManage
                 onEdit={() => openEdit(d)}
                 onDelete={() => void handleDelete(d)}
               />

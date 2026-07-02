@@ -6,8 +6,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { motion } from "framer-motion";
-import { useAppData, DEMO_USERS } from "@/providers/app-data-provider";
-import { useSession } from "@/providers/session-provider";
 import { useTranslation } from "@/providers/locale-provider";
 import { useStudentDashboard } from "@/hooks/api/use-dashboard";
 import { useGroupEvaluations } from "@/hooks/api/use-evaluations";
@@ -18,11 +16,8 @@ import { useSubmissions } from "@/hooks/api/use-submissions";
 import { formatDateTime } from "@/lib/utils";
 import Link from "next/link";
 import { useMemo } from "react";
-import { useSearchParams } from "next/navigation";
 
 export function StudentDashboard() {
-  const { projects, submissions, meetings, notifications, groupEvaluations, getDemoGroupProjectId } = useAppData();
-  const { isDemo } = useSession();
   const { data: dashboard } = useStudentDashboard();
   const { data: myGroup } = useGroupMe();
   const groupId = dashboard?.groupId ?? myGroup?.id;
@@ -32,83 +27,38 @@ export function StudentDashboard() {
   const { data: recentNotifications } = useNotificationsPaginated({ page: 1, limit: 4 });
   const { data: unreadList } = useUnreadNotifications();
   const { t } = useTranslation();
-  const searchParams = useSearchParams();
-  const demoQuery = searchParams.get("demo") === "true" ? `?demo=true&role=Student` : "";
 
-  const liveSubmissions = apiSubmissions ?? [];
+  const mySubmissions = apiSubmissions ?? [];
 
-  const liveMeetings = useMemo(() => {
-    return (apiMeetings ?? [])
+  const nextMeeting = useMemo(() => {
+    const upcoming = (apiMeetings ?? [])
       .filter((m) => m.status === "Scheduled" && new Date(m.meetingDate) >= new Date())
       .sort((a, b) => new Date(a.meetingDate).getTime() - new Date(b.meetingDate).getTime());
-  }, [apiMeetings]);
+    return upcoming[0] ?? (dashboard?.nextMeetingDate
+      ? { meetingDate: dashboard.nextMeetingDate, groupName: myGroup?.groupName ?? "—" }
+      : undefined);
+  }, [apiMeetings, dashboard?.nextMeetingDate, myGroup?.groupName]);
 
-  const liveGrades = useMemo(
+  const myGrades = useMemo(
     () => (apiGrades ?? []).filter((g) => g.isPublished),
     [apiGrades],
   );
 
-  const demoProjectId = myGroup ? getDemoGroupProjectId(myGroup.id) : undefined;
-  const myProject = isDemo
-    ? projects.find((p) => p.id === demoProjectId)
-    : dashboard?.projectTitle
-      ? {
-          title: dashboard.projectTitle,
-          statusName: dashboard.projectStatus ?? "—",
-          department: dashboard.departmentName ?? "—",
-        }
-      : undefined;
+  const myProject = dashboard?.projectTitle
+    ? {
+        title: dashboard.projectTitle,
+        statusName: dashboard.projectStatus ?? "—",
+        department: dashboard.departmentName ?? "—",
+      }
+    : undefined;
 
-  const demoAdvisorInfo = useMemo(() => {
-    if (!isDemo || !myGroup?.id) return undefined;
-    const groupMeetings = meetings
-      .filter((m) => m.groupId === myGroup.id)
-      .sort((a, b) => new Date(b.meetingDate).getTime() - new Date(a.meetingDate).getTime());
-    const advisorName = groupMeetings[0]?.advisorName;
-    if (!advisorName) return undefined;
-    const profile = DEMO_USERS.Advisor;
-    const matchesDemoAdvisor = advisorName
-      .toLowerCase()
-      .includes((profile.lastName ?? "").toLowerCase());
-    const project = projects.find((p) => p.id === demoProjectId);
-    return {
-      label: advisorName,
-      email: matchesDemoAdvisor ? profile.email : undefined,
-      dept: project?.department,
-      role: matchesDemoAdvisor ? "Senior Lecturer" : undefined,
-    };
-  }, [isDemo, myGroup?.id, meetings, projects, demoProjectId]);
-  const groupLabel = myGroup?.groupName ?? "—";
-  const mySubmissions = isDemo
-    ? submissions.filter((s) => s.groupId === myGroup?.id)
-    : liveSubmissions;
-  const nextMeeting = isDemo
-    ? meetings
-        .filter((m) => m.groupId === myGroup?.id && m.status === "Scheduled")
-        .sort((a, b) => new Date(a.meetingDate).getTime() - new Date(b.meetingDate).getTime())[0]
-    : liveMeetings[0] ?? (dashboard?.nextMeetingDate
-      ? { meetingDate: dashboard.nextMeetingDate, groupName: groupLabel }
-      : undefined);
-  const notificationList = isDemo ? notifications : (recentNotifications?.items ?? []);
-  const unread = isDemo
-    ? notifications.filter((n) => !n.isRead).length
-    : (unreadList?.length ?? dashboard?.unreadNotifications ?? 0);
-  const myGrades = isDemo
-    ? groupEvaluations.filter((g) => g.groupId === myGroup?.id && g.isPublished)
-    : liveGrades;
+  const notificationList = recentNotifications?.items ?? [];
+  const unread = unreadList?.length ?? dashboard?.unreadNotifications ?? 0;
   const avgGrade = myGrades.length
     ? Math.round(myGrades.reduce((s, g) => s + (g.obtainedMarks / g.totalMarks) * 100, 0) / myGrades.length)
     : null;
   const pendingCount = mySubmissions.filter((s) => s.status === "Pending").length;
-  const advisorLabel = isDemo
-    ? (demoAdvisorInfo?.label ?? "—")
-    : (dashboard?.advisorName ?? "—");
-  const advisorEmail = isDemo ? demoAdvisorInfo?.email : dashboard?.advisorEmail;
-  const advisorDept = isDemo ? demoAdvisorInfo?.dept : dashboard?.advisorDepartment;
-  const advisorRole = isDemo ? demoAdvisorInfo?.role : dashboard?.advisorDesignation;
-  const semesterLabel = isDemo
-    ? (projects.find((p) => p.id === demoProjectId)?.semesterName ?? "—")
-    : (dashboard?.semesterName ?? "—");
+  const groupLabel = myGroup?.groupName ?? "—";
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
@@ -121,7 +71,7 @@ export function StudentDashboard() {
         <StatCard label={t("dashboard.projectStatus")} value={myProject?.statusName ?? "—"} icon={FolderKanban} />
         <StatCard
           label={t("dashboard.submissions")}
-          value={isDemo ? mySubmissions.length : (dashboard?.submissionCount ?? mySubmissions.length)}
+          value={dashboard?.submissionCount ?? mySubmissions.length}
           icon={FileText}
           change={pendingCount > 0 ? `${pendingCount} ${t("dashboard.pending")}` : undefined}
         />
@@ -149,7 +99,7 @@ export function StudentDashboard() {
               <>
                 <div className="flex flex-wrap gap-2">
                   <Badge>{myProject.department}</Badge>
-                  <Badge variant="secondary">{semesterLabel}</Badge>
+                  <Badge variant="secondary">{dashboard?.semesterName ?? "—"}</Badge>
                   <Badge variant="success">{myProject.statusName}</Badge>
                 </div>
                 <div>
@@ -162,15 +112,15 @@ export function StudentDashboard() {
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div className="rounded-lg border border-border p-4 sm:col-span-2">
                     <p className="text-xs text-muted-foreground">{t("dashboard.supervisor")}</p>
-                    <p className="mt-1 font-medium">{advisorLabel}</p>
-                    {advisorRole && (
-                      <p className="mt-0.5 text-xs text-muted-foreground">{advisorRole}</p>
+                    <p className="mt-1 font-medium">{dashboard?.advisorName ?? "—"}</p>
+                    {dashboard?.advisorDesignation && (
+                      <p className="mt-0.5 text-xs text-muted-foreground">{dashboard.advisorDesignation}</p>
                     )}
-                    {advisorDept && (
-                      <p className="mt-0.5 text-xs text-muted-foreground">{advisorDept}</p>
+                    {dashboard?.advisorDepartment && (
+                      <p className="mt-0.5 text-xs text-muted-foreground">{dashboard.advisorDepartment}</p>
                     )}
-                    {advisorEmail && (
-                      <p className="mt-1 text-xs text-primary">{advisorEmail}</p>
+                    {dashboard?.advisorEmail && (
+                      <p className="mt-1 text-xs text-primary">{dashboard.advisorEmail}</p>
                     )}
                   </div>
                   <div className="rounded-lg border border-border p-4">
@@ -197,11 +147,12 @@ export function StudentDashboard() {
               <p className="text-sm text-muted-foreground">{t("notifications.caughtUp")}</p>
             ) : (
               notificationList.slice(0, 4).map((n) => (
-              <Link key={n.id} href={`/notifications${demoQuery}`} className={`block rounded-lg border p-3 transition-colors hover:bg-muted/50 ${!n.isRead ? "border-primary/30 bg-primary/5" : "border-border"}`}>
-                <p className="text-sm font-medium">{n.title}</p>
-                <p className="text-xs text-muted-foreground">{formatDateTime(n.createdAt)}</p>
-              </Link>
-            )))}
+                <Link key={n.id} href="/notifications" className={`block rounded-lg border p-3 transition-colors hover:bg-muted/50 ${!n.isRead ? "border-primary/30 bg-primary/5" : "border-border"}`}>
+                  <p className="text-sm font-medium">{n.title}</p>
+                  <p className="text-xs text-muted-foreground">{formatDateTime(n.createdAt)}</p>
+                </Link>
+              ))
+            )}
           </CardContent>
         </Card>
       </div>

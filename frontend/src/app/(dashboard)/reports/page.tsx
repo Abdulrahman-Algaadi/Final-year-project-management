@@ -11,7 +11,6 @@ import { ErrorState } from "@/components/states/error-state";
 import { DashboardSkeleton } from "@/components/states/page-skeleton";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useAppData } from "@/providers/app-data-provider";
 import { useSession } from "@/providers/session-provider";
 import { useTranslation } from "@/providers/locale-provider";
 import { useReportsData } from "@/hooks/api/use-reports";
@@ -25,11 +24,8 @@ const PIE_COLORS = [
   "hsl(var(--warning))",
 ];
 
-const STATUS_KEYS = ["Pending", "Approved", "Ongoing", "Completed", "Rejected"] as const;
-
 export default function ReportsPage() {
-  const { projects, students, groups, submissions, departments } = useAppData();
-  const { user, isDemo } = useSession();
+  const { user } = useSession();
   const { t } = useTranslation();
   const { data: apiReports, isLoading, isError, error, refetch } = useReportsData();
 
@@ -47,62 +43,41 @@ export default function ReportsPage() {
   const evaluationSummary = apiReports?.evaluationSummary ?? [];
   const overview = apiReports?.overview;
 
-  const statusData = isDemo
-    ? STATUS_KEYS.map((status) => ({
-        name: t(`status.${status}`),
-        count: projects.filter((p) => p.statusName === status).length,
-      }))
-    : [
-        { name: t("status.Pending"), count: summary?.pending ?? 0 },
-        { name: t("status.Ongoing"), count: summary?.ongoing ?? 0 },
-        { name: t("status.Completed"), count: summary?.completed ?? 0 },
-        { name: t("status.Archived"), count: summary?.archived ?? 0 },
-      ];
+  const statusData = [
+    { name: t("status.Pending"), count: summary?.pending ?? 0 },
+    { name: t("status.Ongoing"), count: summary?.ongoing ?? 0 },
+    { name: t("status.Completed"), count: summary?.completed ?? 0 },
+    { name: t("status.Archived"), count: summary?.archived ?? 0 },
+  ];
 
-  const deptData = isDemo
-    ? departments.map((d) => ({ name: d.code, students: d.studentCount }))
-    : enrollment.map((d) => ({ name: d.departmentName, students: d.studentCount }));
+  const deptData = enrollment.map((d) => ({ name: d.departmentName, students: d.studentCount }));
 
-  const submissionStats = isDemo
-    ? [
-        { name: t("status.Approved"), value: submissions.filter((s) => s.status === "Approved").length },
-        { name: t("status.Pending"), value: submissions.filter((s) => s.status === "Pending").length },
-        { name: t("status.Rejected"), value: submissions.filter((s) => s.status === "Rejected").length },
-        { name: t("reports.revision"), value: submissions.filter((s) => s.status === "RevisionRequired").length },
-      ].filter((s) => s.value > 0)
-    : [
-        { name: t("status.Approved"), value: submissionSummary?.approved ?? 0 },
-        { name: t("status.Pending"), value: submissionSummary?.pending ?? 0 },
-        { name: t("status.Rejected"), value: submissionSummary?.rejected ?? 0 },
-        { name: t("reports.revision"), value: submissionSummary?.revisionRequired ?? 0 },
-      ].filter((s) => s.value > 0);
+  const submissionStats = [
+    { name: t("status.Approved"), value: submissionSummary?.approved ?? 0 },
+    { name: t("status.Pending"), value: submissionSummary?.pending ?? 0 },
+    { name: t("status.Rejected"), value: submissionSummary?.rejected ?? 0 },
+    { name: t("reports.revision"), value: submissionSummary?.revisionRequired ?? 0 },
+  ].filter((s) => s.value > 0);
 
-  const totalStudents = isDemo ? students.length : enrollment.reduce((s, d) => s + d.studentCount, 0);
-  const activeProjects = isDemo ? projects.filter((p) => p.statusName === "Ongoing").length : (summary?.ongoing ?? 0);
-  const groupsCount = isDemo ? groups.length : (overview?.totalGroups ?? 0);
-  const pendingReviews = isDemo
-    ? submissions.filter((s) => s.status === "Pending").length
-    : (submissionSummary?.pending ?? overview?.pendingSubmissions ?? 0);
+  const totalStudents = enrollment.reduce((s, d) => s + d.studentCount, 0);
+  const activeProjects = summary?.ongoing ?? 0;
+  const groupsCount = overview?.totalGroups ?? 0;
+  const pendingReviews = submissionSummary?.pending ?? overview?.pendingSubmissions ?? 0;
 
-  const evaluationData = isDemo
-    ? [
-        { name: "Mid-term", avg: 72, groups: 3 },
-        { name: "Final", avg: 68, groups: 2 },
-      ]
-    : evaluationSummary.map((e) => ({
-        name: e.evaluationName,
-        avg: e.averageMarks,
-        groups: e.groupsEvaluated,
-      }));
+  const evaluationData = evaluationSummary.map((e) => ({
+    name: e.evaluationName,
+    avg: e.averageMarks,
+    groups: e.groupsEvaluated,
+  }));
 
   return (
     <DashboardLayout title={t("nav.reports")}>
       <div className="space-y-6">
         <PageHeader title={t("reports.title")} description={t("reports.desc")} />
 
-        {!isDemo && isLoading ? (
+        {isLoading ? (
           <DashboardSkeleton />
-        ) : !isDemo && isError ? (
+        ) : isError ? (
           <ErrorState message={error instanceof Error ? error.message : undefined} onRetry={() => refetch()} />
         ) : (
           <>

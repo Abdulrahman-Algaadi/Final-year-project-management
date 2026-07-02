@@ -14,11 +14,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Combobox } from "@/components/ui/combobox";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { useAppData } from "@/providers/app-data-provider";
 import { useSession } from "@/providers/session-provider";
 import { useTranslation } from "@/providers/locale-provider";
 import { useStudentsPaginated } from "@/hooks/api/use-students";
-import { useSchedulableGroups } from "@/hooks/api/use-schedulable-groups";
 import { useDepartments } from "@/hooks/api/use-departments";
 import { useReferenceData } from "@/hooks/api/use-reference-data";
 import { useStudentMutations } from "@/hooks/api/use-student-mutations";
@@ -47,8 +45,7 @@ const emptyForm = (): StudentFormState => ({
 });
 
 export default function StudentsPage() {
-  const { students: mockStudents, getDemoGroupMembers } = useAppData();
-  const { user, isDemo } = useSession();
+  const { user } = useSession();
   const { t } = useTranslation();
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -56,9 +53,7 @@ export default function StudentsPage() {
   const [editing, setEditing] = useState<Student | null>(null);
   const [form, setForm] = useState<StudentFormState>(emptyForm);
 
-  const isAdvisor = user?.role === "Advisor";
   const canManage = user?.role === "Admin" || user?.role === "Coordinator";
-  const { groups: schedulableGroups } = useSchedulableGroups();
   const { data: departments } = useDepartments({ limit: 100 });
   const { data: reference } = useReferenceData();
   const { create, update } = useStudentMutations();
@@ -69,34 +64,7 @@ export default function StudentsPage() {
     limit: PAGE_SIZE,
   });
 
-  const demoStudentIds = useMemo(() => {
-    const ids = new Set<number>();
-    schedulableGroups.forEach((g) => {
-      getDemoGroupMembers(g.id).forEach((m) => ids.add(m.studentId));
-    });
-    return ids;
-  }, [schedulableGroups, getDemoGroupMembers]);
-
-  const students = useMemo(() => {
-    if (!isDemo) return paginated?.items ?? [];
-    if (isAdvisor) {
-      return mockStudents.filter((s) => demoStudentIds.has(s.id));
-    }
-    return mockStudents;
-  }, [isDemo, isAdvisor, mockStudents, demoStudentIds, paginated?.items]);
-
-  const filtered = useMemo(() => {
-    if (!isDemo) return students;
-    const q = search.toLowerCase();
-    return students.filter(
-      (s) =>
-        !q ||
-        s.firstName.toLowerCase().includes(q) ||
-        s.lastName.toLowerCase().includes(q) ||
-        s.registrationNo.toLowerCase().includes(q) ||
-        s.email.toLowerCase().includes(q),
-    );
-  }, [students, search, isDemo]);
+  const students = paginated?.items ?? [];
 
   const departmentOptions = useMemo(
     () =>
@@ -204,7 +172,7 @@ export default function StudentsPage() {
           title={t("students.title")}
           description={t("students.desc")}
           action={
-            canManage && !isDemo ? (
+            canManage ? (
               <Button onClick={openCreate} className="gap-2">
                 <Plus className="size-4" />
                 {t("students.add")}
@@ -220,29 +188,29 @@ export default function StudentsPage() {
           }}
           placeholder={t("students.search")}
         />
-        {!isDemo && isLoading ? (
+        {isLoading ? (
           <TableSkeleton rows={6} />
-        ) : !isDemo && isError ? (
+        ) : isError ? (
           <ErrorState message={error instanceof Error ? error.message : undefined} onRetry={() => refetch()} />
         ) : (
           <>
             <CardCollection
-              items={filtered}
+              items={students}
               keyExtractor={(s) => s.id}
               renderCard={(s) => (
                 <StudentCard
                   student={s}
-                  canManage={canManage && !isDemo}
+                  canManage={canManage}
                   onEdit={() => openEdit(s)}
                 />
               )}
               emptyIcon={GraduationCap}
               emptyTitle={t("common.noRecords")}
               emptyDescription={t("students.desc")}
-              emptyActionLabel={canManage && !isDemo ? t("students.add") : undefined}
-              onEmptyAction={canManage && !isDemo ? openCreate : undefined}
+              emptyActionLabel={canManage ? t("students.add") : undefined}
+              onEmptyAction={canManage ? openCreate : undefined}
             />
-            {!isDemo && paginated?.meta && (
+            {paginated?.meta && (
               <PaginationControls
                 page={paginated.meta.page}
                 totalPages={paginated.meta.totalPages}

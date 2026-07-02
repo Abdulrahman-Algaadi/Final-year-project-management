@@ -13,7 +13,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select } from "@/components/ui/select";
 import { Combobox } from "@/components/ui/combobox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { useAppData } from "@/providers/app-data-provider";
 import { useSession } from "@/providers/session-provider";
 import { useTranslation } from "@/providers/locale-provider";
 import { useDepartments } from "@/hooks/api/use-departments";
@@ -21,16 +20,13 @@ import { useProjectsPaginated } from "@/hooks/api/use-projects";
 import { PaginationControls } from "@/components/shared/pagination-controls";
 import { PAGE_SIZE } from "@/lib/api/constants";
 import { useProjectMutations } from "@/hooks/api/use-project-mutations";
-import { useGroupMe } from "@/hooks/api/use-group-me";
-import { useSchedulableGroups } from "@/hooks/api/use-schedulable-groups";
 import { ErrorState } from "@/components/states/error-state";
 import { TableSkeleton } from "@/components/states/page-skeleton";
-import { PROJECT_STATUSES } from "@/lib/data/mock-data";
+import { PROJECT_STATUSES } from "@/lib/data/constants";
 import type { Project } from "@/types";
 
 export default function ProjectsPage() {
-  const { projects: mockProjects, departments: mockDepartments, addProject, updateProject, deleteProject, getDemoGroupProjectId } = useAppData();
-  const { user, isDemo } = useSession();
+  const { user } = useSession();
   const { t } = useTranslation();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -38,7 +34,6 @@ export default function ProjectsPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Project | null>(null);
   const [form, setForm] = useState({ title: "", description: "", statusName: "Pending", departmentId: "" });
-
   const [page, setPage] = useState(1);
 
   const { data: paginated, isLoading, isError, error, refetch } = useProjectsPaginated({
@@ -47,16 +42,11 @@ export default function ProjectsPage() {
     limit: PAGE_SIZE,
   });
   const { data: apiDepartments } = useDepartments({ limit: 100 });
-
   const { create, update, remove } = useProjectMutations();
 
-  const { data: myGroup } = useGroupMe();
-  const { groups: schedulableGroups } = useSchedulableGroups();
-  const isStudent = user?.role === "Student";
-  const isAdvisor = user?.role === "Advisor";
-
-  const projects = isDemo ? mockProjects : (paginated?.items ?? []);
-  const departments = isDemo ? mockDepartments : (apiDepartments ?? []);
+  const projects = paginated?.items ?? [];
+  const departments = apiDepartments ?? [];
+  const canManage = user?.role === "Admin" || user?.role === "Coordinator";
 
   const departmentOptions = useMemo(
     () =>
@@ -85,39 +75,18 @@ export default function ProjectsPage() {
     return match ? String(match.id) : "";
   };
 
-  const canManage = user?.role === "Admin" || user?.role === "Coordinator";
-
-  const scopedProjects = useMemo(() => {
-    if (isStudent) {
-      if (isDemo) {
-        const projectId = myGroup ? getDemoGroupProjectId(myGroup.id) : undefined;
-        return projectId ? projects.filter((p) => p.id === projectId) : [];
-      }
-      return projects;
-    }
-    if (isDemo && isAdvisor) {
-      const ids = new Set(
-        schedulableGroups
-          .map((g) => getDemoGroupProjectId(g.id))
-          .filter((id): id is number => id != null),
-      );
-      return projects.filter((p) => ids.has(p.id));
-    }
-    return projects;
-  }, [projects, isStudent, isAdvisor, isDemo, myGroup, getDemoGroupProjectId, schedulableGroups]);
-
   const filtered = useMemo(() => {
     const filterDepartmentName =
       departmentFilter === "all" ? undefined : getDepartmentName(departmentFilter);
 
-    return scopedProjects.filter((p) => {
+    return projects.filter((p) => {
       const matchSearch = !search || p.title.toLowerCase().includes(search.toLowerCase()) || p.department?.toLowerCase().includes(search.toLowerCase());
       const matchStatus = statusFilter === "all" || p.statusName === statusFilter;
       const matchDepartment =
         !filterDepartmentName || p.department?.toLowerCase() === filterDepartmentName.toLowerCase();
       return matchSearch && matchStatus && matchDepartment;
     });
-  }, [scopedProjects, search, statusFilter, departmentFilter, departments]);
+  }, [projects, search, statusFilter, departmentFilter, departments]);
 
   const openCreate = () => {
     setEditing(null);
@@ -141,30 +110,8 @@ export default function ProjectsPage() {
       toast.error(t("projects.titleRequired"));
       return;
     }
-    const departmentName = getDepartmentName(form.departmentId);
     try {
-      if (isDemo) {
-        if (editing) {
-          updateProject(editing.id, {
-            title: form.title,
-            description: form.description,
-            statusName: form.statusName,
-            department: departmentName,
-          });
-          toast.success(t("projects.updatedToast"));
-        } else {
-          addProject({
-            title: form.title,
-            description: form.description,
-            statusName: form.statusName,
-            department: departmentName,
-            semesterId: 1,
-            semesterName: "Semester 8",
-            statusId: 1,
-          });
-          toast.success(t("projects.createdToast"));
-        }
-      } else if (editing) {
+      if (editing) {
         await update.mutateAsync({
           id: editing.id,
           title: form.title,
@@ -189,11 +136,7 @@ export default function ProjectsPage() {
   const handleDelete = async (id: number) => {
     if (!confirm(t("projects.deleteConfirm"))) return;
     try {
-      if (isDemo) {
-        deleteProject(id);
-      } else {
-        await remove.mutateAsync(id);
-      }
+      await remove.mutateAsync(id);
       toast.success(t("projects.deletedToast"));
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to delete project");
@@ -213,9 +156,9 @@ export default function ProjectsPage() {
           )}
         />
 
-        {!isDemo && isLoading ? (
+        {isLoading ? (
           <TableSkeleton rows={6} />
-        ) : !isDemo && isError ? (
+        ) : isError ? (
           <ErrorState message={error instanceof Error ? error.message : undefined} onRetry={() => refetch()} />
         ) : (
           <>
@@ -262,7 +205,7 @@ export default function ProjectsPage() {
           emptyActionLabel={canManage ? t("projects.new") : undefined}
           onEmptyAction={canManage ? openCreate : undefined}
         />
-            {!isDemo && paginated?.meta && (
+            {paginated?.meta && (
               <PaginationControls
                 page={paginated.meta.page}
                 totalPages={paginated.meta.totalPages}

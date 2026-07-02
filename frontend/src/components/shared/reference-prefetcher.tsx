@@ -7,17 +7,17 @@ import { useSession } from "@/providers/session-provider";
 
 /** Warm reference cache after login so list pages skip the heavy /reference round-trip. */
 export function ReferencePrefetcher() {
-  const { user, isDemo, loading } = useSession();
+  const { user, loading } = useSession();
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    if (!user || isDemo || loading) return;
+    if (!user || loading) return;
     void queryClient.prefetchQuery({
       queryKey: ["reference"],
       queryFn: fetchReferenceData,
       staleTime: 5 * 60_000,
     });
-  }, [user, isDemo, loading, queryClient]);
+  }, [user, loading, queryClient]);
 
   return null;
 }

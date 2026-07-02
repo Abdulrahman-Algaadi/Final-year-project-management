@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { X } from "lucide-react";
 import { AppLogo } from "@/components/shared/app-logo";
 import { motion, AnimatePresence } from "framer-motion";
@@ -21,19 +21,15 @@ interface SidebarProps {
 
 export function Sidebar({ role, open = true, onClose, mobile = false }: SidebarProps) {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
   const { t, dir } = useTranslation();
   const unreadCount = useUnreadCount();
   const items = getNavForRole(role);
-  const demoQuery = searchParams.get("demo") === "true"
-    ? `?demo=true&role=${searchParams.get("role") ?? role}`
-    : "";
   const slideFrom = dir === "rtl" ? "100%" : "-100%";
 
   const content = (
     <div className="flex h-full flex-col">
       <div className="flex h-16 items-center justify-between border-b border-sidebar-border px-4">
-        <Link href={`/dashboard${demoQuery}`} className="flex min-w-0 items-center gap-2.5 font-semibold">
+        <Link href="/dashboard" className="flex min-w-0 items-center gap-2.5 font-semibold">
           <AppLogo size="sm" />
           <span className="truncate text-sm sm:text-base">{t("common.appName")}</span>
         </Link>
@@ -45,7 +41,7 @@ export function Sidebar({ role, open = true, onClose, mobile = false }: SidebarP
       </div>
       <nav className="flex-1 space-y-1 overflow-y-auto p-3" aria-label="Main navigation">
         {items.map((item) => {
-          const href = `${item.href}${demoQuery}`;
+          const href = item.href;
           const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
           const Icon = item.icon;
           return (

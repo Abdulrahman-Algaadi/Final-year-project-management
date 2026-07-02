@@ -14,7 +14,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { useAppData } from "@/providers/app-data-provider";
 import { useSession } from "@/providers/session-provider";
 import { useTranslation } from "@/providers/locale-provider";
 import { useMeetingMutations, useMeetingsByGroup, useMeetingsPaginated } from "@/hooks/api/use-meetings";
@@ -27,8 +26,7 @@ import { EditMeetingDialog } from "@/components/meetings/edit-meeting-dialog";
 import type { Meeting } from "@/types";
 
 export default function MeetingsPage() {
-  const { meetings: mockMeetings, addMeeting, cancelMeeting } = useAppData();
-  const { user, isDemo } = useSession();
+  const { user } = useSession();
   const { t } = useTranslation();
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -40,35 +38,20 @@ export default function MeetingsPage() {
   });
 
   const isStudent = user?.role === "Student";
-  const isAdvisor = user?.role === "Advisor";
   const { data: myGroup } = useGroupMe();
-
   const { groups } = useSchedulableGroups();
 
   const { data: paginated, isLoading: listLoading, isError, error, refetch } = useMeetingsPaginated(
     { search: search || undefined, page, limit: PAGE_SIZE },
-    !isDemo && !isStudent,
+    !isStudent,
   );
   const { data: groupMeetings, isLoading: groupLoading } = useMeetingsByGroup(
-    isStudent && !isDemo ? myGroup?.id : undefined,
+    isStudent ? myGroup?.id : undefined,
   );
   const { create, remove } = useMeetingMutations();
 
-  const isLoading = !isDemo && (isStudent ? groupLoading : listLoading);
-  const allMeetings = isDemo ? mockMeetings : isStudent ? (groupMeetings ?? []) : (paginated?.items ?? []);
-
-  const meetings = useMemo(() => {
-    if (!isDemo) return allMeetings;
-    if (isStudent && myGroup) {
-      return allMeetings.filter((m) => m.groupId === myGroup.id);
-    }
-    if (isAdvisor && user) {
-      const name = `${user.firstName} ${user.lastName}`;
-      return allMeetings.filter((m) => m.advisorName.includes(name));
-    }
-    return allMeetings;
-  }, [allMeetings, isDemo, isStudent, isAdvisor, myGroup, user]);
-
+  const isLoading = isStudent ? groupLoading : listLoading;
+  const meetings = isStudent ? (groupMeetings ?? []) : (paginated?.items ?? []);
   const canCreate = user?.role === "Advisor" || user?.role === "Admin" || user?.role === "Coordinator";
 
   const filtered = useMemo(() => {
@@ -84,11 +67,7 @@ export default function MeetingsPage() {
       toast.error(t("meetings.dateRequired"));
       return;
     }
-    if (!isDemo && !form.groupId) {
-      toast.error(t("groups.selectGroup"));
-      return;
-    }
-    if (isDemo && !form.groupId) {
+    if (!form.groupId) {
       toast.error(t("groups.selectGroup"));
       return;
     }
@@ -97,31 +76,14 @@ export default function MeetingsPage() {
       return;
     }
     try {
-      if (isDemo) {
-        const group = groups.find((g) => g.id === Number(form.groupId));
-        const advisorLabel = user?.role === "Advisor" && user
-          ? `Dr. ${user.firstName} ${user.lastName}`
-          : "Dr. Sarah Ahmed";
-        addMeeting({
-          groupName: group?.groupName ?? "",
-          groupId: Number(form.groupId),
-          advisorName: advisorLabel,
-          meetingDate: new Date(form.meetingDate).toISOString(),
-          location: form.location,
-          onlineLink: form.onlineLink,
-          notes: form.notes,
-          status: "Scheduled",
-        });
-      } else {
-        await create.mutateAsync({
-          groupId: Number(form.groupId),
-          advisorId: user!.personId,
-          meetingDate: new Date(form.meetingDate).toISOString(),
-          location: form.location || undefined,
-          onlineLink: form.onlineLink || undefined,
-          notes: form.notes || undefined,
-        });
-      }
+      await create.mutateAsync({
+        groupId: Number(form.groupId),
+        advisorId: user!.personId,
+        meetingDate: new Date(form.meetingDate).toISOString(),
+        location: form.location || undefined,
+        onlineLink: form.onlineLink || undefined,
+        notes: form.notes || undefined,
+      });
       toast.success(t("meetings.scheduled"));
       setDialogOpen(false);
     } catch (err) {
@@ -131,11 +93,7 @@ export default function MeetingsPage() {
 
   const handleCancel = async (id: number) => {
     try {
-      if (isDemo) {
-        cancelMeeting(id);
-      } else {
-        await remove.mutateAsync(id);
-      }
+      await remove.mutateAsync(id);
       toast.success(t("meetings.cancelled"));
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to cancel meeting");
@@ -160,9 +118,9 @@ export default function MeetingsPage() {
           placeholder={t("meetings.search")}
         />
 
-        {!isDemo && isLoading ? (
+        {isLoading ? (
           <TableSkeleton rows={4} />
-        ) : !isDemo && !isStudent && isError ? (
+        ) : !isStudent && isError ? (
           <ErrorState message={error instanceof Error ? error.message : undefined} onRetry={() => refetch()} />
         ) : (
         <Tabs defaultValue="upcoming">
@@ -208,7 +166,7 @@ export default function MeetingsPage() {
         </Tabs>
         )}
 
-        {!isDemo && paginated && (
+        {!isStudent && paginated && (
           <PaginationControls
             page={page}
             totalPages={paginated.meta.totalPages}

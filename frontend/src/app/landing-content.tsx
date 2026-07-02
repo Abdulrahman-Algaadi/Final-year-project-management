@@ -391,7 +391,7 @@ export function LandingPage() {
                 size="lg"
                 className="gap-2 bg-[hsl(217,91%,60%)] text-white shadow-lg shadow-blue-500/25 hover:bg-[hsl(217,71%,50%)]"
               >
-                <Link href="/dashboard?demo=true&role=Student">
+                <Link href="/login">
                   {t("common.getStarted")}
                   <ArrowRight className="size-4 rtl-flip" />
                 </Link>
