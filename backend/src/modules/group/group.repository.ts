@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { StudentGroup } from '@/database/entities/student-group.entity';
 import { GroupStudent } from '@/database/entities/group-student.entity';
 import { GroupProject } from '@/database/entities/group-project.entity';
+import { ProjectAdvisor } from '@/database/entities/project-advisor.entity';
 import { BaseRepository } from '@/shared/repositories/base.repository';
 
 @Injectable()
@@ -99,5 +100,38 @@ export class GroupProjectRepository {
 
   async save(entity: GroupProject): Promise<GroupProject> {
     return this.repository.save(entity);
+  }
+}
+
+@Injectable()
+export class GroupProjectAdvisorRepository {
+  constructor(@InjectRepository(ProjectAdvisor) private readonly repository: Repository<ProjectAdvisor>) {}
+
+  async findByProjectId(projectId: number): Promise<ProjectAdvisor[]> {
+    return this.repository.find({ where: { projectId }, order: { id: 'ASC' } });
+  }
+
+  async findById(id: number): Promise<ProjectAdvisor | null> {
+    return this.repository.findOne({ where: { id } });
+  }
+
+  async findByProjectAndAdvisor(projectId: number, advisorId: number): Promise<ProjectAdvisor | null> {
+    return this.repository.findOne({ where: { projectId, advisorId } });
+  }
+
+  async findByProjectAndRole(projectId: number, advisorRoleId: number): Promise<ProjectAdvisor | null> {
+    return this.repository.findOne({ where: { projectId, advisorRoleId } });
+  }
+
+  create(data: Partial<ProjectAdvisor>): ProjectAdvisor {
+    return this.repository.create(data);
+  }
+
+  async save(entity: ProjectAdvisor): Promise<ProjectAdvisor> {
+    return this.repository.save(entity);
+  }
+
+  async delete(id: number): Promise<void> {
+    await this.repository.delete(id);
   }
 }

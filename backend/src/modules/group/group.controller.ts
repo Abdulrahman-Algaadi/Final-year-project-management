@@ -17,6 +17,7 @@ import { AuthenticatedUser } from '@/shared/types/common.types';
 import { PaginationQueryDto } from '@/shared/dto/pagination-query.dto';
 import { GroupService } from './group.service';
 import { CreateGroupDto, AddGroupMemberDto, AssignGroupProjectDto } from './dto/create-group.dto';
+import { AssignGroupAdvisorDto } from './dto/assign-group-advisor.dto';
 import { UpdateGroupDto } from './dto/update-group.dto';
 import { GroupResponseDto } from './dto/group-response.dto';
 
@@ -110,5 +111,27 @@ export class GroupController {
     @Body() dto: AssignGroupProjectDto,
   ): Promise<GroupResponseDto> {
     return this.groupService.assignProjectForUser(user, id, dto);
+  }
+
+  @Post(':id/advisors')
+  @RequirePermissions(Permission.GroupUpdate)
+  @ApiOperation({ summary: 'Assign an advisor to the group project' })
+  assignAdvisor(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: AssignGroupAdvisorDto,
+  ): Promise<GroupResponseDto> {
+    return this.groupService.assignAdvisorForUser(user, id, dto);
+  }
+
+  @Delete(':id/advisors/:assignmentId')
+  @RequirePermissions(Permission.GroupUpdate)
+  @ApiOperation({ summary: 'Remove an advisor from the group project' })
+  removeAdvisor(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseIntPipe) id: number,
+    @Param('assignmentId', ParseIntPipe) assignmentId: number,
+  ): Promise<GroupResponseDto> {
+    return this.groupService.removeAdvisorForUser(user, id, assignmentId);
   }
 }

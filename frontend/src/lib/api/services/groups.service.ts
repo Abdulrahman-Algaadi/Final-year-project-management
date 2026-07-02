@@ -75,6 +75,26 @@ export async function assignGroupProject(groupId: number, projectId: number): Pr
   });
 }
 
+export async function assignGroupAdvisor(
+  groupId: number,
+  input: { advisorId: number; advisorRoleId?: number },
+): Promise<GroupDto> {
+  const body: { advisorId: number; advisorRoleId?: number } = { advisorId: input.advisorId };
+  if (input.advisorRoleId !== undefined) {
+    body.advisorRoleId = input.advisorRoleId;
+  }
+  return apiClient<GroupDto>(`/groups/${groupId}/advisors`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export async function removeGroupAdvisor(groupId: number, assignmentId: number): Promise<GroupDto> {
+  return apiClient<GroupDto>(`/groups/${groupId}/advisors/${assignmentId}`, {
+    method: "DELETE",
+  });
+}
+
 export async function fetchGroupDetail(id: number): Promise<Group> {
   const [dto, ref] = await Promise.all([fetchGroupById(id), fetchReferenceData()]);
   return mapGroup(dto, ref);

@@ -28,6 +28,20 @@ export class GroupProjectResponseDto {
   assignedDate!: string;
 }
 
+export class GroupAdvisorResponseDto {
+  @ApiProperty()
+  id!: number;
+
+  @ApiProperty()
+  advisorId!: number;
+
+  @ApiProperty()
+  advisorRoleId!: number;
+
+  @ApiProperty()
+  assignmentDate!: string;
+}
+
 export class GroupResponseDto {
   @ApiProperty()
   id!: number;
@@ -43,4 +57,7 @@ export class GroupResponseDto {
 
   @ApiPropertyOptional()
   project?: GroupProjectResponseDto;
+
+  @ApiPropertyOptional({ type: [GroupAdvisorResponseDto] })
+  advisors?: GroupAdvisorResponseDto[];
 }

@@ -87,12 +87,20 @@ export interface GroupProjectDto {
   assignedDate: string;
 }
 
+export interface GroupAdvisorDto {
+  id: number;
+  advisorId: number;
+  advisorRoleId: number;
+  assignmentDate: string;
+}
+
 export interface GroupDto {
   id: number;
   groupName: string;
   createdOn: string;
   members?: GroupMemberDto[];
   project?: GroupProjectDto;
+  advisors?: GroupAdvisorDto[];
 }
 
 export interface EvaluationDto {

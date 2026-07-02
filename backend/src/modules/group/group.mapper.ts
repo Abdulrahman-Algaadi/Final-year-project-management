@@ -1,10 +1,11 @@
 import { StudentGroup } from '@/database/entities/student-group.entity';
+import { ProjectAdvisor } from '@/database/entities/project-advisor.entity';
 import { Injectable } from '@nestjs/common';
 import { GroupResponseDto } from './dto/group-response.dto';
 
 @Injectable()
 export class GroupMapper {
-  toResponse(entity: StudentGroup): GroupResponseDto {
+  toResponse(entity: StudentGroup, projectAdvisors?: ProjectAdvisor[]): GroupResponseDto {
     return {
       id: entity.id,
       groupName: entity.groupName,
@@ -23,6 +24,12 @@ export class GroupMapper {
             assignedDate: entity.projectAssignment.assignedDate,
           }
         : undefined,
+      advisors: projectAdvisors?.map((a) => ({
+        id: a.id,
+        advisorId: a.advisorId,
+        advisorRoleId: a.advisorRoleId,
+        assignmentDate: a.assignmentDate,
+      })),
     };
   }
 

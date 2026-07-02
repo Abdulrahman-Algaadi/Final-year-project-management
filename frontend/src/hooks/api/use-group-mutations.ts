@@ -3,9 +3,11 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   addGroupMember,
+  assignGroupAdvisor,
   assignGroupProject,
   createGroup,
   deleteGroup,
+  removeGroupAdvisor,
   removeGroupMember,
   updateGroup,
 } from "@/lib/api/services/groups.service";
@@ -42,6 +44,25 @@ export function useGroupMutations() {
     onSuccess: invalidate,
   });
 
+  const assignAdvisor = useMutation({
+    mutationFn: ({
+      groupId,
+      advisorId,
+      advisorRoleId,
+    }: {
+      groupId: number;
+      advisorId: number;
+      advisorRoleId?: number;
+    }) => assignGroupAdvisor(groupId, { advisorId, advisorRoleId }),
+    onSuccess: invalidate,
+  });
+
+  const removeAdvisor = useMutation({
+    mutationFn: ({ groupId, assignmentId }: { groupId: number; assignmentId: number }) =>
+      removeGroupAdvisor(groupId, assignmentId),
+    onSuccess: invalidate,
+  });
+
   const create = useMutation({
     mutationFn: (groupName: string) => createGroup(groupName),
     onSuccess: invalidate,
@@ -57,5 +78,5 @@ export function useGroupMutations() {
     onSuccess: invalidate,
   });
 
-  return { addMember, removeMember, assignProject, create, update, remove };
+  return { addMember, removeMember, assignProject, assignAdvisor, removeAdvisor, create, update, remove };
 }

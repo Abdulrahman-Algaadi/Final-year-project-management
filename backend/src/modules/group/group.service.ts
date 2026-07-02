@@ -1,11 +1,18 @@
 import { Injectable } from '@nestjs/common';
 import { StudentGroup } from '@/database/entities/student-group.entity';
+import { ProjectAdvisor } from '@/database/entities/project-advisor.entity';
 import { DomainException } from '@/shared/exceptions/domain.exception';
 import { AuthenticatedUser, PaginationMeta, QueryOptions } from '@/shared/types/common.types';
 import { CreateGroupDto, AddGroupMemberDto, AssignGroupProjectDto } from './dto/create-group.dto';
+import { AssignGroupAdvisorDto } from './dto/assign-group-advisor.dto';
 import { UpdateGroupDto } from './dto/update-group.dto';
 import { GroupResponseDto } from './dto/group-response.dto';
-import { GroupRepository, GroupStudentRepository, GroupProjectRepository } from './group.repository';
+import {
+  GroupRepository,
+  GroupStudentRepository,
+  GroupProjectRepository,
+  GroupProjectAdvisorRepository,
+} from './group.repository';
 import { GroupMapper } from './group.mapper';
 import { GroupPolicy } from './group.policy';
 import { GroupErrors } from './group.errors';
@@ -21,6 +28,7 @@ export class GroupService {
     private readonly repository: GroupRepository,
     private readonly groupStudentRepository: GroupStudentRepository,
     private readonly groupProjectRepository: GroupProjectRepository,
+    private readonly groupProjectAdvisorRepository: GroupProjectAdvisorRepository,
     private readonly studentRepository: StudentRepository,
     private readonly advisorRepository: AdvisorRepository,
     private readonly lookupRepository: LookupRepository,
@@ -70,7 +78,10 @@ export class GroupService {
     if (!entity) {
       throw DomainException.notFound('Group', id);
     }
-    return this.mapper.toResponse(entity);
+    const advisors = entity.projectAssignment
+      ? await this.groupProjectAdvisorRepository.findByProjectId(entity.projectAssignment.projectId)
+      : undefined;
+    return this.mapper.toResponse(entity, advisors);
   }
 
   private isPrivileged(user: AuthenticatedUser): boolean {
@@ -191,6 +202,24 @@ export class GroupService {
     return this.assignProject(groupId, dto);
   }
 
+  async assignAdvisorForUser(
+    user: AuthenticatedUser,
+    groupId: number,
+    dto: AssignGroupAdvisorDto,
+  ): Promise<GroupResponseDto> {
+    this.assertCanMutateGroup(user);
+    return this.assignAdvisor(groupId, dto);
+  }
+
+  async removeAdvisorForUser(
+    user: AuthenticatedUser,
+    groupId: number,
+    assignmentId: number,
+  ): Promise<GroupResponseDto> {
+    this.assertCanMutateGroup(user);
+    return this.removeAdvisor(groupId, assignmentId);
+  }
+
   async create(dto: CreateGroupDto): Promise<GroupResponseDto> {
     const entity = this.repository.create({
       groupName: dto.groupName.trim(),
@@ -297,5 +326,97 @@ export class GroupService {
     });
     await this.groupProjectRepository.save(assignment);
     return this.findById(groupId);
+  }
+
+  async assignAdvisor(groupId: number, dto: AssignGroupAdvisorDto): Promise<GroupResponseDto> {
+    const group = await this.repository.findByIdWithRelations(groupId);
+    if (!group) {
+      throw DomainException.notFound('Group', groupId);
+    }
+    if (!group.projectAssignment) {
+      throw DomainException.businessRule(
+        'Group must have a project assigned before adding advisors',
+        GroupErrors.NO_PROJECT_ASSIGNED,
+      );
+    }
+
+    const advisor = await this.advisorRepository.findById(dto.advisorId);
+    if (!advisor) {
+      throw DomainException.notFound('Advisor', dto.advisorId);
+    }
+
+    const projectId = group.projectAssignment.projectId;
+
+    const existingByAdvisor = await this.groupProjectAdvisorRepository.findByProjectAndAdvisor(
+      projectId,
+      dto.advisorId,
+    );
+    if (existingByAdvisor) {
+      throw DomainException.businessRule(
+        'Advisor is already assigned to this project',
+        GroupErrors.ADVISOR_ALREADY_ASSIGNED,
+      );
+    }
+
+    const advisorRoleId = await this.resolveAdvisorRoleId(dto.advisorRoleId);
+
+    const existingByRole = await this.groupProjectAdvisorRepository.findByProjectAndRole(
+      projectId,
+      advisorRoleId,
+    );
+    if (existingByRole) {
+      throw DomainException.businessRule(
+        'This advisor role is already filled for the project',
+        GroupErrors.ADVISOR_ROLE_TAKEN,
+      );
+    }
+
+    const assignment = this.groupProjectAdvisorRepository.create({
+      projectId,
+      advisorId: dto.advisorId,
+      advisorRoleId,
+      assignmentDate: new Date().toISOString().slice(0, 10),
+    });
+    await this.groupProjectAdvisorRepository.save(assignment);
+    return this.findById(groupId);
+  }
+
+  async removeAdvisor(groupId: number, assignmentId: number): Promise<GroupResponseDto> {
+    const group = await this.repository.findByIdWithRelations(groupId);
+    if (!group) {
+      throw DomainException.notFound('Group', groupId);
+    }
+    if (!group.projectAssignment) {
+      throw DomainException.businessRule(
+        'Group has no project assigned',
+        GroupErrors.NO_PROJECT_ASSIGNED,
+      );
+    }
+
+    const assignment = await this.groupProjectAdvisorRepository.findById(assignmentId);
+    if (!assignment || assignment.projectId !== group.projectAssignment.projectId) {
+      throw DomainException.notFound('Project advisor assignment', assignmentId);
+    }
+
+    await this.groupProjectAdvisorRepository.delete(assignmentId);
+    return this.findById(groupId);
+  }
+
+  private async resolveAdvisorRoleId(advisorRoleId?: number): Promise<number> {
+    if (advisorRoleId !== undefined) {
+      const lookup = await this.lookupRepository.findById(advisorRoleId);
+      if (lookup?.category === LookupCategory.AdvisorRole) {
+        return advisorRoleId;
+      }
+    }
+
+    const supervisor = await this.lookupRepository.findByCategoryAndValue(
+      LookupCategory.AdvisorRole,
+      'Supervisor',
+    );
+    if (!supervisor) {
+      throw DomainException.notFound('AdvisorRole Supervisor lookup');
+    }
+    return supervisor.id;
   }
 }
