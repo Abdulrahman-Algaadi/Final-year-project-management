@@ -18,6 +18,7 @@ import {
   MapPin,
   Menu,
   Shield,
+  Crown,
   Trophy,
   Users,
   X,
@@ -326,10 +327,9 @@ export function LandingPage() {
   ];
 
   const team = [
-    { initials: "AA", role: t("landing.teamRole1"), color: "from-blue-500 to-blue-700" },
-    { initials: "BK", role: t("landing.teamRole2"), color: "from-purple-500 to-purple-700" },
-    { initials: "CM", role: t("landing.teamRole3"), color: "from-teal-500 to-teal-700" },
-    { initials: "DS", role: t("landing.teamRole4"), color: "from-orange-500 to-orange-700" },
+    { initials: "AYA", name: t("landing.teamMember3Name"), regNo: t("landing.teamMember3Reg"), color: "from-orange-500 to-amber-600", isCommander: true },
+    { initials: "ASA", name: t("landing.teamMember1Name"), regNo: t("landing.teamMember1Reg"), color: "from-blue-500 to-blue-700" },
+    { initials: "OFA", name: t("landing.teamMember2Name"), regNo: t("landing.teamMember2Reg"), color: "from-purple-500 to-purple-700" },
   ];
 
   const fadeUp = {
@@ -526,26 +526,39 @@ export function LandingPage() {
             <p className="mt-4 text-white/60">{t("landing.teamSubtitle")}</p>
           </motion.div>
 
-          <div className="mt-14 grid grid-cols-2 gap-8 sm:grid-cols-4">
+          <div className="mx-auto mt-14 grid max-w-4xl grid-cols-1 gap-8 sm:grid-cols-3">
             {team.map((member, i) => (
               <motion.div
-                key={member.role}
+                key={member.regNo}
                 initial="hidden"
                 whileInView="visible"
                 viewport={{ once: true }}
                 variants={fadeUp}
                 custom={i}
-                className="flex flex-col items-center text-center"
+                className={cn(
+                  "flex flex-col items-center text-center",
+                  member.isCommander && "sm:-mt-2",
+                )}
               >
-                <div
-                  className={cn(
-                    "flex size-20 items-center justify-center rounded-full bg-gradient-to-br text-xl font-bold text-white shadow-lg sm:size-24",
-                    member.color,
+                <div className="relative">
+                  {member.isCommander && (
+                    <span className="absolute -top-3 left-1/2 z-10 flex -translate-x-1/2 items-center gap-1 rounded-full bg-[hsl(38,92%,50%)] px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white shadow-lg">
+                      <Crown className="size-3" />
+                      {t("landing.teamCommanderRole")}
+                    </span>
                   )}
-                >
-                  {member.initials}
+                  <div
+                    className={cn(
+                      "flex size-20 items-center justify-center rounded-full bg-gradient-to-br text-xl font-bold text-white shadow-lg sm:size-24",
+                      member.color,
+                      member.isCommander && "ring-2 ring-[hsl(38,92%,50%)] ring-offset-2 ring-offset-[hsl(222,47%,7%)]",
+                    )}
+                  >
+                    {member.initials}
+                  </div>
                 </div>
-                <p className="mt-4 text-sm font-medium text-white">{member.role}</p>
+                <p className="mt-4 text-sm font-medium leading-snug text-white">{member.name}</p>
+                <p className="mt-1 text-sm text-white/55 ltr-value">{member.regNo}</p>
               </motion.div>
             ))}
           </div>
