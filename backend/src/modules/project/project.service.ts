@@ -128,7 +128,7 @@ export class ProjectService {
       createdAt: new Date(),
     } as Project);
     const saved = await this.repository.save(entity);
-    return this.mapper.toResponse(saved);
+    return this.findById(saved.id);
   }
 
   async updateForUser(
@@ -161,8 +161,8 @@ export class ProjectService {
     if (dto.semesterId !== undefined) entity.semesterId = dto.semesterId;
     if (dto.statusId !== undefined) entity.statusId = dto.statusId;
 
-    const saved = await this.repository.save(entity);
-    return this.mapper.toResponse(saved);
+    await this.repository.save(entity);
+    return this.findById(id);
   }
 
   async remove(id: number): Promise<void> {

@@ -31,6 +31,10 @@ export class ProjectMapper {
 
   toResponse(entity: Project): ProjectResponseDto {
     const department = this.resolveDepartment(entity);
+    const statusName =
+      entity.status && entity.status.id === entity.statusId
+        ? entity.status.statusName
+        : undefined;
     return {
       id: entity.id,
       title: entity.title,
@@ -38,7 +42,7 @@ export class ProjectMapper {
       semesterId: entity.semesterId,
       semesterName: entity.semester?.name,
       statusId: entity.statusId,
-      statusName: entity.status?.statusName,
+      statusName,
       ...department,
       createdAt: entity.createdAt,
     };
