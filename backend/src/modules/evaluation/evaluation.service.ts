@@ -5,6 +5,7 @@ import { AuthenticatedUser, PaginationMeta, QueryOptions } from '@/shared/types/
 import { AdvisorRepository } from '@/modules/advisor/advisor.repository';
 import { StudentRepository } from '@/modules/student/student.repository';
 import { GroupStudentRepository } from '@/modules/group/group.repository';
+import { NotificationService } from '@/modules/notification/notification.service';
 import { CreateEvaluationDto, CreateGroupEvaluationDto, UpdateGroupEvaluationDto } from './dto/create-evaluation.dto';
 import { UpdateEvaluationDto } from './dto/update-evaluation.dto';
 import { EvaluationResponseDto, GroupEvaluationResponseDto } from './dto/evaluation-response.dto';
@@ -27,6 +28,7 @@ export class EvaluationService {
     private readonly advisorRepository: AdvisorRepository,
     private readonly studentRepository: StudentRepository,
     private readonly groupStudentRepository: GroupStudentRepository,
+    private readonly notificationService: NotificationService,
     private readonly mapper: EvaluationMapper,
     private readonly policy: EvaluationPolicy,
   ) {}
@@ -227,6 +229,8 @@ export class EvaluationService {
       this.policy.assertAdvisorAssigned(isAssigned);
     }
 
+    const wasPublished = entity.isPublished;
+
     if (dto.obtainedMarks !== undefined && entity.evaluation) {
       this.policy.assertMarksWithinTotal(dto.obtainedMarks, entity.evaluation);
       entity.obtainedMarks = dto.obtainedMarks;
@@ -242,6 +246,16 @@ export class EvaluationService {
     if (dto.isPublished !== undefined) entity.isPublished = dto.isPublished;
 
     const saved = await this.groupEvaluationRepository.save(entity);
+
+    if (dto.isPublished === true && !wasPublished) {
+      const evaluationName = saved.evaluation?.name ?? entity.evaluation?.name ?? 'Evaluation';
+      await this.notificationService.notifyGroupMembers(
+        saved.groupId,
+        'Grade published',
+        `Your grade for "${evaluationName}" is now available: ${saved.obtainedMarks} marks.`,
+      );
+    }
+
     return this.mapper.toGroupEvaluationResponse(saved);
   }
 

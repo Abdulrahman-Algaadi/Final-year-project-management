@@ -6,6 +6,7 @@ import { ProjectAdvisor } from '@/database/entities/project-advisor.entity';
 import { AdvisorModule } from '@/modules/advisor/advisor.module';
 import { StudentModule } from '@/modules/student/student.module';
 import { GroupModule } from '@/modules/group/group.module';
+import { NotificationModule } from '@/modules/notification/notification.module';
 import { EvaluationController } from './evaluation.controller';
 import { EvaluationService } from './evaluation.service';
 import {
@@ -22,6 +23,7 @@ import { EvaluationPolicy } from './evaluation.policy';
     AdvisorModule,
     StudentModule,
     GroupModule,
+    NotificationModule,
   ],
   controllers: [EvaluationController],
   providers: [

@@ -190,6 +190,8 @@ export class MeetingService {
     }
     await this.assertUserCanAccessMeeting(user, entity);
 
+    const previousDate = entity.meetingDate.toISOString();
+
     if (dto.meetingDate) {
       this.policy.assertNotInPast(dto.meetingDate);
       entity.meetingDate = new Date(dto.meetingDate);
@@ -201,6 +203,15 @@ export class MeetingService {
     if (dto.onlineLink !== undefined) entity.onlineLink = dto.onlineLink;
 
     const saved = await this.repository.save(entity);
+
+    if (dto.meetingDate && saved.meetingDate.toISOString() !== previousDate) {
+      await this.notificationService.notifyGroupMembers(
+        saved.groupId,
+        'Meeting rescheduled',
+        `Your meeting has been rescheduled to ${saved.meetingDate.toISOString()}.`,
+      );
+    }
+
     return this.mapper.toResponse(saved);
   }
 
@@ -210,6 +221,11 @@ export class MeetingService {
       throw DomainException.notFound('Meeting', id);
     }
     await this.assertUserCanAccessMeeting(user, entity);
+    await this.notificationService.notifyGroupMembers(
+      entity.groupId,
+      'Meeting cancelled',
+      `The meeting scheduled for ${entity.meetingDate.toISOString()} has been cancelled.`,
+    );
     await this.repository.softDelete(id);
   }
 }

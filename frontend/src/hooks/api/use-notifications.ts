@@ -29,6 +29,7 @@ export function useNotificationsPaginated(query?: ListQuery) {
     queryKey: ["notifications", "me", "paginated", query],
     queryFn: () => fetchMyNotificationsPaginated(query),
     enabled: apiReady,
+    refetchOnWindowFocus: true,
   });
 }
 
@@ -39,6 +40,8 @@ export function useUnreadNotifications() {
     queryKey: ["notifications", "unread"],
     queryFn: fetchMyUnreadNotifications,
     enabled: apiReady,
+    refetchInterval: 30_000,
+    refetchOnWindowFocus: true,
   });
 }
 

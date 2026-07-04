@@ -34,7 +34,11 @@ export function useMeetingsPaginated(query?: ListQuery, enabled = true) {
 
 export function useMeetingMutations() {
   const queryClient = useQueryClient();
-  const invalidate = () => queryClient.invalidateQueries({ queryKey: ["meetings"] });
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: ["meetings"] });
+    queryClient.invalidateQueries({ queryKey: ["notifications"] });
+    queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+  };
 
   return {
     create: useMutation({ mutationFn: createMeeting, onSuccess: invalidate }),

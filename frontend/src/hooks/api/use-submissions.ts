@@ -55,7 +55,11 @@ export function useCreateSubmission() {
         storageBucket: uploaded.storageBucket,
       });
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["submissions"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["submissions"] });
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    },
   });
 }
 
@@ -63,6 +67,10 @@ export function useReviewSubmission() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ id, status }: { id: number; status: string }) => reviewSubmission(id, status),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["submissions"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["submissions"] });
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    },
   });
 }

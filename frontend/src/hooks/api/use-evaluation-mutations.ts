@@ -14,6 +14,8 @@ export function useEvaluationMutations() {
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ["evaluations"] });
+    queryClient.invalidateQueries({ queryKey: ["notifications"] });
+    queryClient.invalidateQueries({ queryKey: ["dashboard"] });
   };
 
   const createGrade = useMutation({
